@@ -30,9 +30,3 @@ export const nav = [
   { label: "Books", href: "/books" },
   { label: "Building", href: "/building" },
 ] as const;
-
-export const hooks = {
-  writings: "Occasional notes, mostly on markets and the software underneath them.",
-  books: "What I've read, and why each one stayed.",
-  building: "Five companies since 2020, and what I'm working on now.",
-} as const;

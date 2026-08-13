@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { site, hooks } from "@/content/site";
+import { site } from "@/content/site";
 import { published, formatMonth } from "@/content/writings";
 import { books } from "@/content/books";
 import { companies, currently } from "@/content/building";
@@ -18,7 +18,6 @@ export default function Home() {
             All writings
           </Link>
         </div>
-        <p className="hook">{hooks.writings}</p>
         <ul className="rows tight">
           {published.slice(0, 5).map((w) => (
             <li key={w.slug}>
@@ -42,7 +41,6 @@ export default function Home() {
             All books
           </Link>
         </div>
-        <p className="hook">{hooks.books}</p>
         <ul className="rows">
           {books.slice(0, 5).map((b) => (
             <li key={b.title}>
@@ -64,7 +62,6 @@ export default function Home() {
             Full record
           </Link>
         </div>
-        <p className="hook">{hooks.building}</p>
         <ul className="rows">
           <li>
             <p className="line">
