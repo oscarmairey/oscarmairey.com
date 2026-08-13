@@ -23,7 +23,17 @@ const password = process.argv[2] ?? generated;
 
 const salt = randomBytes(16);
 const key = await derive(password, salt);
-const hash = ["scrypt", SCRYPT.N, SCRYPT.r, SCRYPT.p, salt.toString("base64"), key.toString("base64")].join("$");
+
+/* Colons and base64url, not the usual `$`-separated PHC string: this goes into
+   a .env file, where dotenv would expand `$16384` and destroy the hash. */
+const hash = [
+  "scrypt",
+  SCRYPT.N,
+  SCRYPT.r,
+  SCRYPT.p,
+  salt.toString("base64url"),
+  key.toString("base64url"),
+].join(":");
 
 if (generated) console.log(`password: ${generated}`);
 console.log(`ADMIN_PASSWORD_HASH=${hash}`);

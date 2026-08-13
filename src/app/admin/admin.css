@@ -1,0 +1,387 @@
+/* =====================================================================
+   The editor. Same paper, same ink, same single family as the site — it is
+   the same site seen from the other side, so nothing new is introduced:
+   no radius, no shadow, no second accent. Hairlines and text.
+
+   Tokens come from globals.css. Everything here is prefixed .adm, except
+   the preview, which deliberately borrows the public classes so what is
+   shown is what will ship.
+   ===================================================================== */
+
+.adm {
+  max-width: 44rem;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+/* ---- top bar --------------------------------------------------------- */
+.adm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 2rem;
+  padding: 2rem 0 0.9rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.adm-bar .adm-here {
+  font-size: var(--t-l);
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.adm-bar nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 1.25rem;
+  font-size: var(--t-s);
+}
+
+.adm-bar nav a,
+.adm-bar nav button {
+  color: var(--ink-3);
+  text-decoration: none;
+  transition: color 120ms var(--ease);
+}
+
+.adm-bar nav a:hover,
+.adm-bar nav button:hover,
+.adm-bar nav a[aria-current="page"] {
+  color: var(--oxide);
+}
+
+/* The sign-out button sits on the same baseline as the links beside it. */
+.adm-bar nav .adm-btn {
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ---- headings and sections ------------------------------------------ */
+.adm-title {
+  margin-top: 2.4rem;
+  font-size: var(--t-xl);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.014em;
+}
+
+.adm-section {
+  margin-top: 2.5rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--rule);
+}
+
+.adm-section > h2 {
+  font-size: var(--t-l);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.adm-hint {
+  margin-top: 0.3rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+
+.adm-empty {
+  margin-top: 1.2rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* ---- lists ----------------------------------------------------------- */
+.adm-list {
+  margin-top: 1.3rem;
+  list-style: none;
+  padding: 0;
+}
+
+.adm-list > li + li {
+  margin-top: 1.1rem;
+}
+
+.adm-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 1.25rem;
+}
+
+.adm-row .adm-name {
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 0.055em;
+  transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
+}
+
+a.adm-name:hover,
+a.adm-name:focus-visible {
+  color: var(--oxide);
+  text-decoration-color: var(--oxide);
+}
+
+.adm-state {
+  font-size: var(--t-s);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.adm-state.live {
+  color: var(--oxide);
+}
+
+.adm-sub {
+  margin-top: 0.15rem;
+  font-size: var(--t-s);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ---- forms ----------------------------------------------------------- */
+.adm-field {
+  display: block;
+  margin-top: 1.15rem;
+}
+
+.adm-field > span {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+
+.adm-input,
+.adm-area {
+  display: block;
+  width: 100%;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid var(--rule-firm);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-m);
+  line-height: 1.5;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 120ms var(--ease);
+}
+
+.adm-input:hover,
+.adm-area:hover {
+  border-color: var(--ink-3);
+}
+
+.adm-input::placeholder,
+.adm-area::placeholder {
+  color: var(--ink-3);
+  opacity: 0.7;
+}
+
+.adm-input.big {
+  font-size: var(--t-l);
+  font-weight: 500;
+}
+
+.adm-area {
+  min-height: 24rem;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+/* Two short fields side by side once there is room for them. */
+.adm-pair {
+  display: grid;
+  gap: 0 1rem;
+}
+
+@media (min-width: 32rem) {
+  .adm-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ---- buttons --------------------------------------------------------- */
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--rule-firm);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-s);
+  cursor: pointer;
+  transition: color 120ms var(--ease), border-color 120ms var(--ease),
+    background-color 120ms var(--ease);
+}
+
+.adm-btn:hover:not(:disabled) {
+  border-color: var(--oxide);
+  color: var(--oxide);
+}
+
+.adm-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.adm-btn.primary {
+  border-color: var(--oxide);
+  background: var(--oxide);
+  color: var(--paper);
+}
+
+.adm-btn.primary:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.adm-btn.quiet {
+  border-color: transparent;
+  padding-inline: 0;
+  color: var(--ink-3);
+}
+
+.adm-btn.quiet:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--oxide);
+}
+
+.adm-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ---- write / preview switch ------------------------------------------ */
+.adm-tabs {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 2rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.adm-tab {
+  padding: 0 0 0.55rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: var(--t-s);
+  cursor: pointer;
+  transition: color 120ms var(--ease), border-color 120ms var(--ease);
+}
+
+.adm-tab:hover {
+  color: var(--oxide);
+}
+
+.adm-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--oxide);
+}
+
+/* ---- the syntax reminder under the body ------------------------------ */
+.adm-syntax {
+  margin-top: 0.5rem;
+  font-size: var(--t-s);
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+.adm-syntax code {
+  font-family: inherit;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.adm-syntax .sep {
+  padding-inline: 0.45rem;
+  color: var(--rule-firm);
+}
+
+/* ---- the bar that saves ---------------------------------------------- */
+.adm-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  margin-top: 2rem;
+  padding: 0.9rem 0 calc(0.9rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.adm-actions .adm-status {
+  flex: 1 1 100%;
+  order: -1;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+
+@media (min-width: 32rem) {
+  .adm-actions .adm-status {
+    flex: 1 1 auto;
+    order: 0;
+    text-align: right;
+  }
+}
+
+.adm-status.bad {
+  color: var(--oxide);
+}
+
+/* ---- preview --------------------------------------------------------- */
+.adm-preview {
+  margin-top: 2rem;
+}
+
+/* ---- login ----------------------------------------------------------- */
+.adm-login {
+  max-width: 22rem;
+  margin: 22vh auto 4rem;
+}
+
+.adm-login h1 {
+  font-size: var(--t-l);
+  font-weight: 500;
+}
+
+.adm-login .adm-btn {
+  width: 100%;
+  margin-top: 1.15rem;
+}
+
+.adm-error {
+  margin-top: 1rem;
+  font-size: var(--t-s);
+  color: var(--oxide);
+}
+
+/* ---- footer of every admin page -------------------------------------- */
+.adm-foot {
+  margin-top: 3rem;
+  padding: 1.4rem 0 4rem;
+  border-top: 1px solid var(--rule);
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
