@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { site } from "@/content/site";
-import { published, formatMonth } from "@/content/writings";
-import { books } from "@/content/books";
-import { companies, currently } from "@/content/building";
+import { publicBooks, publicCompanies, publishedWritings } from "@/lib/content";
+import { formatMonth } from "@/lib/format";
 
-export default function Home() {
+/** Rendered per request, on top of the cache in src/lib/content.ts: a publish
+ *  from /admin is visible on the next load, and a database that is down costs
+ *  freshness rather than the page. */
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const [writings, books, companies] = await Promise.all([
+    publishedWritings(),
+    publicBooks(),
+    publicCompanies(),
+  ]);
+
   return (
     <>
       <div className="lede">
@@ -19,7 +29,7 @@ export default function Home() {
           </Link>
         </div>
         <ul className="rows tight">
-          {published.slice(0, 5).map((w) => (
+          {writings.slice(0, 5).map((w) => (
             <li key={w.slug}>
               <p className="line">
                 <Link className="t" href={`/writings/${w.slug}`}>
@@ -43,7 +53,7 @@ export default function Home() {
         </div>
         <ul className="rows">
           {books.slice(0, 5).map((b) => (
-            <li key={b.title}>
+            <li key={b.id}>
               {/* Titles only on the index. The authors are on /books. */}
               <p className="line">
                 <span className="t">{b.title}</span>
@@ -63,18 +73,13 @@ export default function Home() {
           </Link>
         </div>
         <ul className="rows">
-          <li>
-            <p className="line">
-              <span className="t">{currently.name}</span>
-              <span className="when">Now</span>
-            </p>
-            <p className="note">{currently.summary}</p>
-          </li>
-          {companies.map((c) => (
-            <li key={c.name}>
+          {companies.slice(0, 5).map((c) => (
+            <li key={c.slug}>
               <p className="line">
-                <span className="t">{c.name}</span>
-                <span className="when">{c.years}</span>
+                <Link className="t" href={`/building/${c.slug}`}>
+                  {c.name}
+                </Link>
+                {c.period && <span className="when">{c.period}</span>}
               </p>
               <p className="note">{c.summary}</p>
             </li>

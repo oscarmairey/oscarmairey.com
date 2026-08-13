@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { published, formatMonth } from "@/content/writings";
+import { publishedWritings } from "@/lib/content";
+import { formatMonth } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Writings",
@@ -8,14 +11,16 @@ export const metadata: Metadata = {
   alternates: { canonical: "/writings" },
 };
 
-export default function WritingsPage() {
+export default async function WritingsPage() {
+  const writings = await publishedWritings();
+
   return (
     <>
       <h1 className="title">Writings</h1>
 
       <section className="section">
         <ul className="rows">
-          {published.map((w) => (
+          {writings.map((w) => (
             <li key={w.slug}>
               <p className="line">
                 <Link className="t" href={`/writings/${w.slug}`}>

@@ -1,20 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Block } from "@/content/writings";
-import { published, getWriting, formatDay, formatMonth } from "@/content/writings";
-import { inline } from "@/lib/inline";
+import Prose from "@/components/site/prose";
 import { site } from "@/content/site";
+import { parseBody } from "@/lib/blocks";
+import { publishedWriting, publishedWritings } from "@/lib/content";
+import { formatDay, formatMonth } from "@/lib/format";
 
 type Params = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return published.map((w) => ({ slug: w.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const writing = getWriting(slug);
+  const writing = await publishedWriting(slug);
   if (!writing) return {};
   return {
     title: writing.title,
@@ -33,57 +32,23 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function WritingPage({ params }: Params) {
   const { slug } = await params;
-  const writing = getWriting(slug);
-  if (!writing || !writing.blocks) notFound();
+  const writing = await publishedWriting(slug);
+  if (!writing) notFound();
 
-  const others = published.filter((w) => w.slug !== writing.slug).slice(0, 2);
+  const all = await publishedWritings();
+  const others = all.filter((w) => w.slug !== writing.slug).slice(0, 2);
 
   return (
     <>
       <article>
         <h1 className="title">{writing.title}</h1>
-        <p className="sub">{writing.subtitle}</p>
+        {writing.subtitle && <p className="sub">{writing.subtitle}</p>}
         <p className="stamp">
           <time dateTime={writing.date}>{formatDay(writing.date)}</time>
           {writing.readingTime && ` · ${writing.readingTime}`}
         </p>
 
-        <div className="prose">
-          {writing.blocks.map((block, i) => {
-            switch (block.kind) {
-              case "h2":
-                return <h2 key={i}>{block.text}</h2>;
-              case "quote":
-                return (
-                  <blockquote key={i}>
-                    <p>{block.text}</p>
-                    <p className="src">{block.source}</p>
-                  </blockquote>
-                );
-              /* Notes render inside the paragraph they follow, so the float
-                 starts on the line carrying the marker rather than below it. */
-              case "note":
-                return null;
-              default: {
-                const note =
-                  writing.blocks?.[i + 1]?.kind === "note"
-                    ? (writing.blocks[i + 1] as Extract<Block, { kind: "note" }>)
-                    : undefined;
-                return (
-                  <p key={i}>
-                    {inline(block.text)}
-                    {note && (
-                      <span className="sn" id={`note-${note.n}`}>
-                        <span className="n">{note.n}</span>
-                        {inline(note.text)}
-                      </span>
-                    )}
-                  </p>
-                );
-              }
-            }
-          })}
-        </div>
+        <Prose blocks={parseBody(writing.body)} />
       </article>
 
       {others.length > 0 && (

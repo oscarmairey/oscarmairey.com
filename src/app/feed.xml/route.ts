@@ -1,13 +1,17 @@
 import { site } from "@/content/site";
-import { published } from "@/content/writings";
+import { publishedWritings } from "@/lib/content";
 import { plain } from "@/lib/inline";
 
 const escape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export const dynamic = "force-static";
+/** Built per request from the same cache the pages read, so a publish appears
+ *  in the feed without a deploy. */
+export const dynamic = "force-dynamic";
 
-export function GET() {
+export async function GET() {
+  const published = await publishedWritings();
+
   const items = published
     .map((w) => {
       const url = `${site.url}/writings/${w.slug}`;

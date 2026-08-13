@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { books } from "@/content/books";
+import { publicBooks } from "@/lib/content";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Books",
@@ -7,7 +9,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/books" },
 };
 
-export default function BooksPage() {
+export default async function BooksPage() {
+  const books = await publicBooks();
+
   return (
     <>
       <h1 className="title">Books</h1>
@@ -15,11 +19,11 @@ export default function BooksPage() {
       <section className="section">
         <ul className="rows">
           {books.map((b) => (
-            <li key={b.title}>
+            <li key={b.id}>
               <p className="line">
                 <span>
                   <span className="t">{b.title}</span>
-                  <span className="by">{b.author}</span>
+                  {b.author && <span className="by">{b.author}</span>}
                 </span>
                 {b.year && <span className="when">{b.year}</span>}
               </p>

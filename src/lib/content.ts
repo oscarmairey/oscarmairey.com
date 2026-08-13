@@ -26,40 +26,57 @@ export type Book = {
   note: string;
 };
 
+export type Company = {
+  slug: string;
+  name: string;
+  role: string;
+  /** Free text: "2024–2025", "Now". Shown, never parsed. */
+  period: string;
+  summary: string;
+  /** Long form for /building/[slug], in the block format writings use. */
+  body: string;
+  url: string;
+};
+
 const TTL = 30_000;
 
 type Entry<T> = { value: T; at: number };
 type Cell<T> = { entry?: Entry<T> };
 
 const globalForContent = globalThis as unknown as {
-  __omContent?: { writings: Cell<Writing[]>; books: Cell<Book[]> };
+  __omContent?: Record<string, Cell<unknown>>;
 };
 
-const cells = (globalForContent.__omContent ??= { writings: {}, books: {} });
+/** The store survives hot reloads, which means it can outlive the shape of the
+ *  code that made it. So cells are created on demand, one key at a time, rather
+ *  than as a single object literal: adding a list here never finds an older
+ *  store missing the key. */
+const store = (globalForContent.__omContent ??= {});
 
-async function read<T>(cell: Cell<T>, label: string, load: () => Promise<T>, empty: T): Promise<T> {
-  const hit = cell.entry;
+const cell = <T,>(name: string): Cell<T> => ((store[name] ??= {}) as Cell<T>);
+
+async function read<T>(name: string, load: () => Promise<T>, empty: T): Promise<T> {
+  const slot = cell<T>(name);
+  const hit = slot.entry;
   if (hit && Date.now() - hit.at < TTL) return hit.value;
 
   try {
     const value = await load();
-    cell.entry = { value, at: Date.now() };
+    slot.entry = { value, at: Date.now() };
     return value;
   } catch (error) {
-    console.error(`[content] ${label} unavailable: ${(error as Error).message}`);
+    console.error(`[content] ${name} unavailable: ${(error as Error).message}`);
     return hit ? hit.value : empty;
   }
 }
 
 /** Called after every write in the editor so a publish is visible at once. */
 export function invalidateContent() {
-  cells.writings.entry = undefined;
-  cells.books.entry = undefined;
+  for (const slot of Object.values(store)) slot.entry = undefined;
 }
 
 export function publishedWritings(): Promise<Writing[]> {
   return read(
-    cells.writings,
     "writings",
     () =>
       query<Writing>(`
@@ -84,7 +101,6 @@ export async function publishedWriting(slug: string): Promise<Writing | undefine
 
 export function publicBooks(): Promise<Book[]> {
   return read(
-    cells.books,
     "books",
     () =>
       query<Book>(`
@@ -94,4 +110,22 @@ export function publicBooks(): Promise<Book[]> {
       `),
     [],
   );
+}
+
+export function publicCompanies(): Promise<Company[]> {
+  return read(
+    "companies",
+    () =>
+      query<Company>(`
+        SELECT slug, name, role, period, summary, body, COALESCE(url, '') AS url
+        FROM companies
+        ORDER BY sort_order, id
+      `),
+    [],
+  );
+}
+
+export async function publicCompany(slug: string): Promise<Company | undefined> {
+  const all = await publicCompanies();
+  return all.find((c) => c.slug === slug);
 }
