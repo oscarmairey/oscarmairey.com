@@ -35,6 +35,20 @@ export type WritingInput = {
   date: string;
 };
 
+export type CompanyRow = {
+  id: number;
+  slug: string;
+  name: string;
+  role: string;
+  period: string;
+  summary: string;
+  body: string;
+  url: string;
+  sortOrder: number;
+};
+
+export type CompanyInput = Omit<CompanyRow, "id">;
+
 const WRITING_COLUMNS = `
   id::int AS id,
   slug,
@@ -132,6 +146,89 @@ export async function updateBook(id: number, input: Omit<BookRow, "id">): Promis
 export async function deleteBook(id: number): Promise<void> {
   await query("DELETE FROM books WHERE id = $1", [id]);
   invalidateContent();
+}
+
+/* ---- companies ---------------------------------------------------------- */
+
+/** A company has no draft state: the record is either right or being corrected,
+ *  and there is nothing to stage. So there is no publish here, only a save. */
+const COMPANY_COLUMNS = `
+  id::int AS id,
+  slug,
+  name,
+  role,
+  period,
+  summary,
+  body,
+  COALESCE(url, '') AS url,
+  sort_order AS "sortOrder"
+`;
+
+export function listCompanies(): Promise<CompanyRow[]> {
+  return query<CompanyRow>(`
+    SELECT ${COMPANY_COLUMNS}
+    FROM companies
+    ORDER BY sort_order, id
+  `);
+}
+
+export function getCompany(id: number): Promise<CompanyRow | undefined> {
+  return queryOne<CompanyRow>(`SELECT ${COMPANY_COLUMNS} FROM companies WHERE id = $1`, [id]);
+}
+
+export async function createCompany(input: CompanyInput): Promise<number> {
+  const row = await queryOne<{ id: number }>(
+    `INSERT INTO companies (slug, name, role, period, summary, body, url, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), $8)
+     RETURNING id::int AS id`,
+    [
+      input.slug,
+      input.name,
+      input.role,
+      input.period,
+      input.summary,
+      input.body,
+      input.url,
+      input.sortOrder,
+    ],
+  );
+  invalidateContent();
+  return row!.id;
+}
+
+export async function updateCompany(id: number, input: CompanyInput): Promise<void> {
+  await query(
+    `UPDATE companies
+     SET slug = $2, name = $3, role = $4, period = $5, summary = $6, body = $7,
+         url = NULLIF($8, ''), sort_order = $9, updated_at = now()
+     WHERE id = $1`,
+    [
+      id,
+      input.slug,
+      input.name,
+      input.role,
+      input.period,
+      input.summary,
+      input.body,
+      input.url,
+      input.sortOrder,
+    ],
+  );
+  invalidateContent();
+}
+
+export async function deleteCompany(id: number): Promise<void> {
+  await query("DELETE FROM companies WHERE id = $1", [id]);
+  invalidateContent();
+}
+
+/** The next place in the record, so a new company lands at the end rather than
+ *  silently tying with the first. */
+export async function nextCompanyOrder(): Promise<number> {
+  const row = await queryOne<{ next: number }>(
+    "SELECT COALESCE(MAX(sort_order) + 1, 0)::int AS next FROM companies",
+  );
+  return row?.next ?? 0;
 }
 
 /** Postgres' unique_violation, the only write error worth naming to the user. */

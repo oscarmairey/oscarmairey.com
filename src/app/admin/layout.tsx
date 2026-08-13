@@ -29,6 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <nav aria-label="Editor">
             <Link href="/admin">Writings</Link>
             <Link href="/admin/books">Books</Link>
+            <Link href="/admin/companies">Companies</Link>
             <Link href="/">Site</Link>
             <form action={signOut}>
               <button className="adm-btn quiet" type="submit">

@@ -117,6 +117,62 @@ export async function deleteWriting(id: number) {
   redirect("/admin");
 }
 
+/* ---- companies ---------------------------------------------------------- */
+
+export type CompanyDraft = {
+  id: number | null;
+  slug: string;
+  name: string;
+  role: string;
+  period: string;
+  summary: string;
+  body: string;
+  url: string;
+  sortOrder: number;
+};
+
+export async function saveCompany(draft: CompanyDraft): Promise<SaveResult> {
+  await requireSession();
+
+  const name = draft.name.trim();
+  const slug = slugify(draft.slug.trim() || name);
+  if (!slug) return { ok: false, error: "Give it a name, or a slug, before saving." };
+
+  const input: store.CompanyInput = {
+    slug,
+    name: name || "Untitled",
+    role: draft.role.trim(),
+    period: draft.period.trim(),
+    summary: draft.summary.trim(),
+    body: draft.body,
+    url: draft.url.trim(),
+    sortOrder: Number.isFinite(draft.sortOrder) ? Math.trunc(draft.sortOrder) : 0,
+  };
+
+  try {
+    let id = draft.id;
+    if (id === null) {
+      id = await store.createCompany(input);
+    } else {
+      await store.updateCompany(id, input);
+    }
+    published();
+    return { ok: true, id, slug };
+  } catch (error) {
+    if (store.isSlugTaken(error)) {
+      return { ok: false, error: `The slug “${slug}” already belongs to another company.` };
+    }
+    return { ok: false, error: message(error) };
+  }
+}
+
+export async function deleteCompany(id: number) {
+  await requireSession();
+  await store.deleteCompany(id);
+  published();
+  redirect("/admin/companies");
+}
+
 /* ---- books -------------------------------------------------------------- */
 
 const text = (form: FormData, name: string) => String(form.get(name) ?? "").trim();

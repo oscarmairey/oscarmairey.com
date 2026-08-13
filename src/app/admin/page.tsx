@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
-import { listBooks, listWritings, type WritingRow } from "@/lib/editor";
+import { listBooks, listCompanies, listWritings, type WritingRow } from "@/lib/editor";
 import { formatMonth } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,11 @@ function Writings({ rows }: { rows: WritingRow[] }) {
 export default async function Dashboard() {
   await requireSession();
 
-  const [writings, books] = await Promise.all([listWritings(), listBooks()]);
+  const [writings, books, companies] = await Promise.all([
+    listWritings(),
+    listBooks(),
+    listCompanies(),
+  ]);
   const drafts = writings.filter((w) => !w.published);
   const live = writings.filter((w) => w.published);
 
@@ -36,7 +40,8 @@ export default async function Dashboard() {
     <>
       <h1 className="adm-title">Editor</h1>
       <p className="adm-hint">
-        {live.length} published, {drafts.length} in draft, {books.length} books.
+        {live.length} published, {drafts.length} in draft, {books.length} books,{" "}
+        {companies.length} companies.
       </p>
 
       <section className="adm-section">
@@ -75,9 +80,32 @@ export default async function Dashboard() {
         </div>
       </section>
 
+      <section className="adm-section">
+        <h2>Companies</h2>
+        <p className="adm-hint">In the order the site shows them. The first reads as Currently.</p>
+        <ul className="adm-list">
+          {companies.map((c) => (
+            <li key={c.id}>
+              <p className="adm-row">
+                <Link className="adm-name" href={`/admin/companies/${c.id}`}>
+                  {c.name}
+                </Link>
+                <span className="adm-state">{c.period}</span>
+              </p>
+            </li>
+          ))}
+        </ul>
+        {companies.length === 0 && <p className="adm-empty">Nothing in the record yet.</p>}
+        <div className="adm-buttons" style={{ marginTop: "1.6rem" }}>
+          <Link className="adm-btn" href="/admin/companies">
+            Edit companies
+          </Link>
+        </div>
+      </section>
+
       <p className="adm-foot">
-        Writings and books live in Postgres. Everything else on the site — the bio, the record of
-        companies, the talks — is still in <code>src/content</code>, and changing it means a deploy.
+        Writings, books and companies live in Postgres. What is left in <code>src/content</code> —
+        the bio, the code list, the talks — still changes with a deploy.
       </p>
     </>
   );
