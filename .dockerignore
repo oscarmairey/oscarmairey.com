@@ -1,3 +1,8 @@
 node_modules
 .next
 .git
+# Secrets must never reach the image; they arrive through env_file at runtime.
+.env
+.env.*
+npm-debug.log*
+*.tsbuildinfo

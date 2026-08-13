@@ -2,8 +2,25 @@ services:
   web:
     build: .
     ports:
+      # Caddy terminates TLS and proxies to this. Nothing else reaches it.
       - "127.0.0.1:3100:3100"
+    # Secrets only: DATABASE_URL, ADMIN_PASSWORD_HASH, SESSION_SECRET.
+    # Never committed — see README.md.
+    env_file:
+      - .env.production
     environment:
       - NODE_ENV=production
       - PORT=3100
+    networks:
+      - default
+      - postgres
     restart: unless-stopped
+
+networks:
+  # Postgres lives in the xtrapoll stack and publishes only to the host's
+  # loopback, which a container cannot reach through host-gateway. So the site
+  # joins that stack's network instead and talks to the container directly, on
+  # the internal port: postgresql://…@xtrapoll-db-1:5432/oscarmairey
+  postgres:
+    external: true
+    name: xtrapoll_default
