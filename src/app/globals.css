@@ -2,78 +2,388 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================================
+   oscarmairey.com — editorial oxide red, light only.
+   ONE family (Literata). FOUR sizes. THREE weights.
+   Every contrast pair below clears WCAG AA (4.5:1) on paper.
+   ===================================================================== */
+
 @layer base {
   :root {
-    --background: 220 33% 98%;
-    --foreground: 224 71.4% 4.1%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 262.1 83.3% 57.8%;
-    --radius: 1rem;
+    /* paper + ink, neutrals tinted toward the accent hue */
+    --paper: oklch(98.6% 0.005 62); /* #fdfaf7 */
+    --rule: oklch(90% 0.009 58); /* #e3ddd8  hairlines */
+    --rule-firm: oklch(78% 0.012 55); /* #beb6b0  underlines */
+    --ink: oklch(23% 0.014 48); /* #231b17  16.26:1 */
+    --ink-2: oklch(45% 0.015 48); /* #5d534e   7.18:1 */
+    --ink-3: oklch(52% 0.015 48); /* #716762   5.31:1 */
+    --oxide: oklch(48% 0.115 32); /* #934132   6.63:1 */
+
+    /* four sizes, ratio 1.333, fluid between 360px and 1280px */
+    --t-s: 0.9rem;
+    --t-m: clamp(1.0625rem, 1.014rem + 0.217vw, 1.1875rem);
+    --t-l: clamp(1.269rem, 1.146rem + 0.547vw, 1.583rem);
+    --t-xl: clamp(1.583rem, 1.374rem + 0.921vw, 2.111rem);
+
+    --page: 44rem;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .dark {
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 263.4 70% 50.4%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
   html {
-    @apply scroll-smooth;
+    -webkit-text-size-adjust: 100%;
+    color-scheme: light;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-reading), Literata, "Iowan Old Style", Charter, Cambria, Georgia,
+      serif;
+    font-size: var(--t-m);
+    font-weight: 400;
+    line-height: 1.65;
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--oxide);
+    color: var(--paper);
+  }
+
+  h1,
+  h2 {
+    margin: 0;
+    font-weight: 400;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--oxide);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--paper);
   }
 }
 
-section {
-  scroll-margin-top: 2rem;
+@layer components {
+  /* ---- shell ------------------------------------------------------ */
+  .wrap {
+    max-width: var(--page);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
+  .skip {
+    position: absolute;
+    left: -9999px;
+    background: var(--paper);
+    padding: 0.6rem 0.9rem;
+  }
+  .skip:focus {
+    left: 1rem;
+    top: 1rem;
+    z-index: 20;
+  }
+
+  .mast {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.4rem 2rem;
+    padding: 3.25rem 0 0.9rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .mast-name {
+    font-size: var(--t-l);
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: color 120ms var(--ease);
+  }
+  a.mast-name:hover {
+    color: var(--oxide);
+  }
+  h1.mast-name {
+    font-size: var(--t-xl);
+    font-weight: 600;
+    letter-spacing: -0.014em;
+  }
+  .mast nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.5rem;
+  }
+  .mast nav a {
+    color: var(--ink-2);
+    text-decoration: none;
+    transition: color 120ms var(--ease);
+  }
+  .mast nav a:hover,
+  .mast nav a[aria-current="page"] {
+    color: var(--oxide);
+  }
+
+  /* ---- page opening ----------------------------------------------- */
+  .lede {
+    margin-top: 2rem;
+  }
+  .lede p + p {
+    margin-top: 1.15em;
+  }
+  .title {
+    margin-top: 2.4rem;
+    font-size: var(--t-xl);
+    font-weight: 600;
+    line-height: 1.18;
+    letter-spacing: -0.014em;
+  }
+  .sub {
+    margin-top: 0.7rem;
+    color: var(--ink-2);
+  }
+  .stamp {
+    margin-top: 0.7rem;
+    font-size: var(--t-s);
+    color: var(--ink-3);
+  }
+
+  /* ---- sections ---------------------------------------------------- */
+  .section {
+    margin-top: 2.75rem;
+    padding-top: 1.7rem;
+    border-top: 1px solid var(--rule);
+  }
+  .section h2 {
+    font-size: var(--t-l);
+    font-weight: 500;
+    line-height: 1.25;
+  }
+  .hook {
+    margin-top: 0.3rem;
+    font-size: var(--t-s);
+    color: var(--ink-3);
+  }
+
+  /* ---- entry lists ------------------------------------------------- */
+  .rows {
+    margin-top: 1.4rem;
+    list-style: none;
+    padding: 0;
+  }
+  .rows > li + li {
+    margin-top: 1.15rem;
+  }
+  .rows.tight > li + li {
+    margin-top: 0.55rem;
+  }
+  .rows.record > li + li {
+    margin-top: 2.1rem;
+  }
+  .line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0 1.5rem;
+  }
+  .t {
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 0.16em;
+    text-decoration-thickness: 0.055em;
+    transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
+  }
+  a.t:hover,
+  a.t:focus-visible {
+    color: var(--oxide);
+    text-decoration-color: var(--oxide);
+  }
+  .by {
+    color: var(--ink-2);
+  }
+  .by::before {
+    content: "·";
+    color: var(--rule-firm);
+    padding-inline: 0.4rem;
+  }
+  .when {
+    font-size: var(--t-s);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .note {
+    margin-top: 0.15rem;
+    font-size: var(--t-s);
+    line-height: 1.55;
+    color: var(--ink-2);
+  }
+  .role {
+    margin-top: 0.15rem;
+    font-size: var(--t-s);
+    color: var(--ink-3);
+  }
+  .rec {
+    margin-top: 0.6rem;
+  }
+  .more {
+    display: inline-block;
+    margin-top: 1.5rem;
+    font-size: var(--t-s);
+    color: var(--ink-3);
+    text-decoration-color: var(--rule-firm);
+    text-underline-offset: 0.16em;
+    transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
+  }
+  .more:hover {
+    color: var(--oxide);
+    text-decoration-color: var(--oxide);
+  }
+
+  /* ---- prose ------------------------------------------------------- */
+  .prose {
+    margin-top: 2.2rem;
+  }
+  .section > .prose {
+    margin-top: 1.1rem;
+  }
+  .prose p {
+    margin-top: 1.15em;
+  }
+  .prose > :first-child {
+    margin-top: 0;
+  }
+  .prose h2 {
+    margin: 2.4rem 0 0.15rem;
+    font-size: var(--t-l);
+    font-weight: 500;
+    line-height: 1.25;
+  }
+  .prose blockquote {
+    margin: 1.8rem 0 1.8rem 1.8rem;
+    color: var(--ink-2);
+  }
+  .prose blockquote p {
+    margin-top: 0;
+  }
+  .prose .src {
+    margin-top: 0.5rem;
+    font-size: var(--t-s);
+    color: var(--ink-3);
+  }
+  .prose a,
+  .rec a,
+  .note a {
+    color: var(--oxide);
+    text-decoration: underline;
+    text-decoration-color: var(--rule-firm);
+    text-underline-offset: 0.16em;
+    text-decoration-thickness: 0.055em;
+    transition: text-decoration-color 120ms var(--ease);
+  }
+  .prose a:hover,
+  .rec a:hover,
+  .note a:hover {
+    text-decoration-color: var(--oxide);
+  }
+
+  /* sidenotes: inline by default, in the margin when there is room */
+  .ref {
+    font-size: 0.68em;
+    vertical-align: super;
+    line-height: 0;
+    color: var(--oxide);
+  }
+  .sn {
+    display: block;
+    margin: 0.9rem 0 0.9rem 1.8rem;
+    font-size: var(--t-s);
+    line-height: 1.55;
+    color: var(--ink-2);
+  }
+  .sn .n {
+    margin-right: 0.35rem;
+    color: var(--ink-3);
+  }
+  @media (min-width: 1240px) {
+    .sn {
+      float: right;
+      clear: right;
+      width: 11rem;
+      margin: 0.3rem -13.5rem 0.8rem 0;
+    }
+  }
+
+  /* ---- footer, and the one photograph on the site ------------------ */
+  .site-footer {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin-top: 2.75rem;
+    padding: 1.7rem 0 4.5rem;
+    border-top: 1px solid var(--rule);
+  }
+  .site-footer p {
+    font-size: var(--t-s);
+    color: var(--ink-3);
+  }
+  .site-footer p + p {
+    margin-top: 0.35rem;
+  }
+  .site-footer a {
+    text-decoration: none;
+    transition: color 120ms var(--ease);
+  }
+  .site-footer a:hover {
+    color: var(--oxide);
+  }
+  .site-footer .mail {
+    color: var(--oxide);
+  }
+  .site-footer .dot {
+    color: var(--rule-firm);
+    padding-inline: 0.3rem;
+  }
+  .portrait {
+    display: block;
+    flex: none;
+    width: 96px;
+    height: 96px;
+  }
 }
 
-/* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  :root {
+    --paper: #fff;
+    --ink: #000;
+    --oxide: #7a2f21;
+  }
+  .mast nav,
+  .skip,
+  .more {
+    display: none;
+  }
+  body {
+    font-size: 10.5pt;
   }
 }
