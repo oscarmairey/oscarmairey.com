@@ -20,11 +20,10 @@ export default async function BooksPage() {
         <ul className="rows">
           {books.map((b) => (
             <li key={b.id}>
+              {/* The author is still stored and still editable in /admin; the
+                  list just does not print it. */}
               <p className="line">
-                <span>
-                  <span className="t">{b.title}</span>
-                  {b.author && <span className="by">{b.author}</span>}
-                </span>
+                <span className="t">{b.title}</span>
                 {b.year && <span className="when">{b.year}</span>}
               </p>
               <p className="note">{b.note}</p>

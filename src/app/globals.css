@@ -256,14 +256,6 @@
     color: var(--oxide);
     text-decoration-color: var(--oxide);
   }
-  .by {
-    color: var(--ink-2);
-  }
-  .by::before {
-    content: "·";
-    color: var(--rule-firm);
-    padding-inline: 0.4rem;
-  }
   .when {
     font-size: var(--t-s);
     color: var(--ink-3);
