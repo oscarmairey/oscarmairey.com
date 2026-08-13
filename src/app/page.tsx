@@ -46,11 +46,9 @@ export default function Home() {
         <ul className="rows">
           {books.slice(0, 5).map((b) => (
             <li key={b.title}>
+              {/* Titles only on the index. The authors are on /books. */}
               <p className="line">
-                <span>
-                  <span className="t">{b.title}</span>
-                  <span className="by">{b.author}</span>
-                </span>
+                <span className="t">{b.title}</span>
                 {b.year && <span className="when">{b.year}</span>}
               </p>
               <p className="note">{b.note}</p>
