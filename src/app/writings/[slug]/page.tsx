@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Block } from "@/content/writings";
 import { published, getWriting, formatDay, formatMonth } from "@/content/writings";
 import { inline } from "@/lib/inline";
 import { site } from "@/content/site";
@@ -59,15 +60,27 @@ export default async function WritingPage({ params }: Params) {
                     <p className="src">{block.source}</p>
                   </blockquote>
                 );
+              /* Notes render inside the paragraph they follow, so the float
+                 starts on the line carrying the marker rather than below it. */
               case "note":
+                return null;
+              default: {
+                const note =
+                  writing.blocks?.[i + 1]?.kind === "note"
+                    ? (writing.blocks[i + 1] as Extract<Block, { kind: "note" }>)
+                    : undefined;
                 return (
-                  <span className="sn" key={i} id={`note-${block.n}`}>
-                    <span className="n">{block.n}</span>
+                  <p key={i}>
                     {inline(block.text)}
-                  </span>
+                    {note && (
+                      <span className="sn" id={`note-${note.n}`}>
+                        <span className="n">{note.n}</span>
+                        {inline(note.text)}
+                      </span>
+                    )}
+                  </p>
                 );
-              default:
-                return <p key={i}>{inline(block.text)}</p>;
+              }
             }
           })}
         </div>

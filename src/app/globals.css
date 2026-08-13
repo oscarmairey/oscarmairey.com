@@ -242,6 +242,7 @@
     margin-top: 1.5rem;
     font-size: var(--t-s);
     color: var(--ink-3);
+    text-decoration: underline;
     text-decoration-color: var(--rule-firm);
     text-underline-offset: 0.16em;
     transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
