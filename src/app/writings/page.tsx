@@ -12,7 +12,6 @@ export default function WritingsPage() {
   return (
     <>
       <h1 className="title">Writings</h1>
-      <p className="sub">Notes on markets and the software underneath them.</p>
 
       <section className="section">
         <ul className="rows">

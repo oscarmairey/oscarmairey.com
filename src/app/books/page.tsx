@@ -11,7 +11,6 @@ export default function BooksPage() {
   return (
     <>
       <h1 className="title">Books</h1>
-      <p className="sub">Books I&apos;ve actually finished, with the reason each one stayed.</p>
 
       <section className="section">
         <ul className="rows">

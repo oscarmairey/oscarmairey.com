@@ -12,7 +12,6 @@ export default function BuildingPage() {
   return (
     <>
       <h1 className="title">Building</h1>
-      <p className="sub">What I&apos;m working on now, then everything before it.</p>
 
       <section className="section">
         <h2>Currently</h2>
