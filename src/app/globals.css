@@ -177,6 +177,19 @@
     font-weight: 500;
     line-height: 1.25;
   }
+  /* Section title left, its "all of them" link right, on one baseline. Too
+     narrow to hold both and the link drops under the title, flush left: a
+     single item on a wrapped space-between line sits at flex-start. */
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.15rem 1.5rem;
+  }
+  .section-head .more {
+    margin-top: 0;
+  }
   .hook {
     margin-top: 0.3rem;
     font-size: var(--t-s);

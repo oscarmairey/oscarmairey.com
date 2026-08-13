@@ -12,7 +12,12 @@ export default function Home() {
       </div>
 
       <section className="section">
-        <h2>Writings</h2>
+        <div className="section-head">
+          <h2>Writings</h2>
+          <Link className="more" href="/writings">
+            All writings
+          </Link>
+        </div>
         <p className="hook">{hooks.writings}</p>
         <ul className="rows tight">
           {published.slice(0, 5).map((w) => (
@@ -28,13 +33,15 @@ export default function Home() {
             </li>
           ))}
         </ul>
-        <Link className="more" href="/writings">
-          All writings
-        </Link>
       </section>
 
       <section className="section">
-        <h2>Books</h2>
+        <div className="section-head">
+          <h2>Books</h2>
+          <Link className="more" href="/books">
+            All books
+          </Link>
+        </div>
         <p className="hook">{hooks.books}</p>
         <ul className="rows">
           {books.slice(0, 5).map((b) => (
@@ -50,13 +57,15 @@ export default function Home() {
             </li>
           ))}
         </ul>
-        <Link className="more" href="/books">
-          All books
-        </Link>
       </section>
 
       <section className="section">
-        <h2>Building</h2>
+        <div className="section-head">
+          <h2>Building</h2>
+          <Link className="more" href="/building">
+            Full record
+          </Link>
+        </div>
         <p className="hook">{hooks.building}</p>
         <ul className="rows">
           <li>
@@ -76,9 +85,6 @@ export default function Home() {
             </li>
           ))}
         </ul>
-        <Link className="more" href="/building">
-          Full record
-        </Link>
       </section>
     </>
   );
