@@ -104,9 +104,16 @@
     padding: 3.25rem 0 0.9rem;
     border-bottom: 1px solid var(--rule);
   }
-  .mast-name {
+  /* One wordmark, cut the same way on every route. The home page prints it as
+     the page's h1 and the other pages as a link back, so both must resolve to
+     the same size and weight: Literata's optical-size axis turns any size gap
+     into a different letterform, which reads as a different font. */
+  .mast-name,
+  h1.mast-name {
+    font-family: inherit;
     font-size: var(--t-l);
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: -0.014em;
     line-height: 1.2;
     text-decoration: none;
     transition: color 120ms var(--ease);
@@ -114,17 +121,18 @@
   a.mast-name:hover {
     color: var(--oxide);
   }
-  h1.mast-name {
-    font-size: var(--t-xl);
-    font-weight: 600;
-    letter-spacing: -0.014em;
-  }
   .mast nav {
     display: flex;
     flex-wrap: wrap;
     gap: 0 1.5rem;
   }
+  /* Every section link is the same type. Only the colour carries the state. */
   .mast nav a {
+    font-family: inherit;
+    font-size: var(--t-m);
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0;
     color: var(--ink-2);
     text-decoration: none;
     transition: color 120ms var(--ease);
