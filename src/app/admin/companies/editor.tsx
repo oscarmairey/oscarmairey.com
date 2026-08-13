@@ -37,6 +37,12 @@ export default function CompanyEditor({ initial }: Props) {
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
+  /* Nothing here works until React has taken the page over, and a Save button
+     that quietly does nothing is worse than no button. Until this flips, the
+     controls are visibly disabled and say so. */
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+
   /* The slug trails the name until it is edited by hand, and then it stops. */
   const [slugPinned, setSlugPinned] = useState(initial.slug !== "");
 
@@ -123,17 +129,19 @@ export default function CompanyEditor({ initial }: Props) {
   const blocks = parseBody(body);
   const stamp = [period, role].filter(Boolean).join(" · ");
 
-  const status = error
-    ? error
-    : busy
-      ? "Saving…"
-      : dirty
-        ? "Unsaved changes"
-        : savedAt
-          ? `Saved at ${savedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
-          : id === null
-            ? "Not saved yet"
-            : "On the site";
+  const status = !ready
+    ? "Loading the editor…"
+    : error
+      ? error
+      : busy
+        ? "Saving…"
+        : dirty
+          ? "Unsaved changes"
+          : savedAt
+            ? `Saved at ${savedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+            : id === null
+              ? "Not saved yet"
+              : "On the site";
 
   return (
     <>
@@ -300,7 +308,7 @@ export default function CompanyEditor({ initial }: Props) {
           {status}
         </p>
 
-        <button className="adm-btn primary" type="button" onClick={() => void persist()} disabled={busy}>
+        <button className="adm-btn primary" type="button" onClick={() => void persist()} disabled={busy || !ready}>
           Save
         </button>
 
@@ -310,7 +318,7 @@ export default function CompanyEditor({ initial }: Props) {
           </a>
         )}
 
-        <button className="adm-btn quiet" type="button" onClick={() => void remove()} disabled={busy}>
+        <button className="adm-btn quiet" type="button" onClick={() => void remove()} disabled={busy || !ready}>
           Delete
         </button>
       </div>

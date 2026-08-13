@@ -35,6 +35,12 @@ export default function Editor({ initial }: Props) {
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
+  /* Nothing here works until React has taken the page over, and a Save button
+     that quietly does nothing is worse than no button. Until this flips, the
+     controls are visibly disabled and say so. */
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+
   /* The slug trails the title until it is edited by hand, and then it stops. */
   const [slugPinned, setSlugPinned] = useState(initial.slug !== "");
 
@@ -135,19 +141,21 @@ export default function Editor({ initial }: Props) {
     await deleteWriting(id);
   }
 
-  const status = error
-    ? error
-    : busy
-      ? "Saving…"
-      : dirty
-        ? published
-          ? "Unsaved changes"
-          : "Unsaved"
-        : savedAt
-          ? `Saved at ${savedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
-          : published
-            ? "Published"
-            : "Draft";
+  const status = !ready
+    ? "Loading the editor…"
+    : error
+      ? error
+      : busy
+        ? "Saving…"
+        : dirty
+          ? published
+            ? "Unsaved changes"
+            : "Unsaved"
+          : savedAt
+            ? `Saved at ${savedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+            : published
+              ? "Published"
+              : "Draft";
 
   return (
     <>
@@ -286,7 +294,7 @@ export default function Editor({ initial }: Props) {
           {status}
         </p>
 
-        <button className="adm-btn" type="button" onClick={() => void persist()} disabled={busy}>
+        <button className="adm-btn" type="button" onClick={() => void persist()} disabled={busy || !ready}>
           Save
         </button>
 
@@ -295,7 +303,7 @@ export default function Editor({ initial }: Props) {
             className="adm-btn"
             type="button"
             onClick={() => void togglePublished(false)}
-            disabled={busy}
+            disabled={busy || !ready}
           >
             Unpublish
           </button>
@@ -304,7 +312,7 @@ export default function Editor({ initial }: Props) {
             className="adm-btn primary"
             type="button"
             onClick={() => void togglePublished(true)}
-            disabled={busy}
+            disabled={busy || !ready}
           >
             Publish
           </button>
@@ -316,7 +324,7 @@ export default function Editor({ initial }: Props) {
           </a>
         )}
 
-        <button className="adm-btn quiet" type="button" onClick={() => void remove()} disabled={busy}>
+        <button className="adm-btn quiet" type="button" onClick={() => void remove()} disabled={busy || !ready}>
           Delete
         </button>
       </div>
