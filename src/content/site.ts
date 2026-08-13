@@ -13,7 +13,11 @@ export const site = {
     "Oscar Mairey builds the technology infrastructure of ARTE One, an AI-native hedge fund based in Dubai. Previously at Chainraizer, Ta-da, and Le Crypto Daily.",
   ogDescription:
     "Algorithmic asset manager at ARTE One. Builds the software behind the funds and products he works on.",
-  bio: "Oscar Mairey is an algorithmic asset manager at ARTE One, an AI-native hedge fund in Dubai, where he builds the firm's technology infrastructure. Before ARTE One he was at Chainraizer: he ran operations, wrote the Raizer platform and its smart contracts, and explained the product to institutions. Earlier he was at Ta-da, taking a French-speaking community into eight countries and then moving into sales, and before that the first employee at Le Crypto Daily. He started in crypto in 2020 and has been shipping code since 2021.",
+  /** The home page is an index, so the bio is two sentences. The record it
+   *  used to carry — Chainraizer, Ta-da, Le Crypto Daily, the dates — lives
+   *  on /building. `description` and `ogDescription` stay longer on purpose:
+   *  they are the citation surface, not the page. */
+  bio: "Oscar Mairey builds the technology infrastructure of ARTE One, an AI-native hedge fund in Dubai. He has been in crypto since 2020 and shipping code since 2021.",
   links: [
     { label: "GitHub", href: "https://github.com/oscarmairey" },
     { label: "X", href: "https://x.com/oscarmairey" },
