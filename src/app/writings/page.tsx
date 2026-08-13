@@ -16,7 +16,7 @@ export default async function WritingsPage() {
 
   return (
     <>
-      <h1 className="title">Writings</h1>
+      <h1 className="vh">Writings</h1>
 
       <section className="section">
         <ul className="rows">

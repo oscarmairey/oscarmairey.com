@@ -23,7 +23,7 @@ export default async function BuildingPage() {
 
   return (
     <>
-      <h1 className="title">Building</h1>
+      <h1 className="vh">Building</h1>
 
       {now && (
         <section className="section">

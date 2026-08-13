@@ -14,7 +14,7 @@ export default async function BooksPage() {
 
   return (
     <>
-      <h1 className="title">Books</h1>
+      <h1 className="vh">Books</h1>
 
       <section className="section">
         <ul className="rows">
