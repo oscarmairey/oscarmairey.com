@@ -1,0 +1,10 @@
+
+oscarmairey.com {
+    tls /etc/caddy/certs/rss.oscarmairey.com.pem /etc/caddy/certs/rss.oscarmairey.com.key
+    reverse_proxy localhost:3100
+}
+
+www.oscarmairey.com {
+    tls /etc/caddy/certs/rss.oscarmairey.com.pem /etc/caddy/certs/rss.oscarmairey.com.key
+    redir https://oscarmairey.com{uri} permanent
+}

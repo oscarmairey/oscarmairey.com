@@ -62,38 +62,18 @@
   }
 }
 
-/* Smooth scrolling for anchor links */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Add some spacing to sections when navigating via anchor links */
 section {
-  scroll-margin-top: 5rem;
+  scroll-margin-top: 2rem;
 }
 
-/* Custom animations */
-@keyframes float {
-  0% {
-    transform: translateY(0px);
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  50% {
-    transform: translateY(-20px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
 }
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-/* Gradient text */
-.text-gradient {
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary) / 0.8));
-}
-

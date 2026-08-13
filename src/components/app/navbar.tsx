@@ -153,7 +153,7 @@ export default function Navbar() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 bg-background/95 backdrop-blur-lg z-40 md:hidden pt-20"
+            className="fixed inset-0 bg-background z-40 md:hidden pt-20"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}

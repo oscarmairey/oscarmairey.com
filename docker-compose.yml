@@ -1,0 +1,9 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:3100:3100"
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+    restart: unless-stopped

@@ -1,36 +1,35 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
+import Image from "next/image"
 import Link from "next/link"
-import { ChevronRight } from "lucide-react"
 import { motion } from "framer-motion"
 import { useInView } from "react-intersection-observer"
-import { Button } from "@/components/ui/button"
 
 const thoughts = [
   {
     title: "AI: Ideas matter more than execution",
     excerpt:
-      "In the age of AI, the quality of your ideas becomes paramount. With tools like GPT-4 and automated development, the barrier to execution is lower than ever, shifting the competitive advantage to innovative thinking.",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*-DAj8QPi-tgAM52wKozk1A.jpeg",
+      "When anyone can build, the bottleneck shifts to thinking. AI has lowered the barrier to execution — the competitive advantage now belongs to those with better ideas.",
+    image: "/conf2.png",
     date: "March 2025",
-    url: "#article-1",
+    url: "#thoughts",
   },
   {
     title: "Blockchain has no Product Market Fit (yet)",
     excerpt:
-      "Despite the hype and investment in blockchain technology, we haven't found its killer application. Analyzing current use cases, limitations, and what it would take to achieve true product-market fit.",
-    image: "https://i.redd.it/fr6f38nwswla1.jpg",
+      "Billions invested, no killer app. What would it actually take for blockchain to find real product-market fit?",
+    image: "/dubai.png",
     date: "March 2025",
-    url: "#article-2",
+    url: "#thoughts",
   },
   {
-    title: "Thoughts on user-centric design, and why it matters",
+    title: "Why user-centric design matters",
     excerpt:
-      "The importance of putting users first in product development. How empathy-driven design leads to better products, higher retention, and sustainable growth in modern software development.",
-    image: "https://miro.medium.com/v2/resize:fit:1200/1*-g2E8Q0pyILA7_Nu5x11vw.jpeg",
+      "Empathy-driven design isn't a nice-to-have — it's what separates products that retain users from those that don't.",
+    image: "/side.png",
     date: "February 2025",
-    url: "#article-3",
+    url: "#thoughts",
   },
 ]
 
@@ -75,11 +74,7 @@ export default function Thoughts() {
           transition={{ duration: 0.6 }}
           className="max-w-3xl mx-auto text-center mb-16"
         >
-          <span className="inline-block px-3 py-1 text-sm font-medium bg-primary/10 text-primary rounded-full mb-4">
-            Insights & Perspectives
-          </span>
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">Thought Leadership</h2>
-          <p className="text-foreground/70 text-lg">Ideas and insights on entrepreneurship, innovation, and business</p>
+          <h2 className="text-3xl md:text-5xl font-heading mb-4">Thoughts & Writing</h2>
         </motion.div>
 
         <motion.div
@@ -91,12 +86,13 @@ export default function Thoughts() {
           {thoughts.map((thought, index) => (
             <motion.div key={index} variants={itemVariants}>
               <Link href={thought.url} className="block h-full cursor-pointer">
-                <Card className="group overflow-hidden border-none bg-background/50 backdrop-blur-sm shadow-md hover:shadow-md transition-all duration-300 h-full flex flex-col relative">
+                <Card className="group overflow-hidden border border-border/50 bg-card hover:shadow-md transition-shadow duration-300 h-full flex flex-col relative">
                   <div className="relative h-56 overflow-hidden">
-                    <img
-                      src={thought.image || "/placeholder.svg"}
+                    <Image
+                      src={thought.image}
                       alt={thought.title}
-                      className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
@@ -108,29 +104,11 @@ export default function Thoughts() {
                       {thought.title}
                     </h3>
                     <p className="text-foreground/70 mb-4 flex-1">{thought.excerpt}</p>
-
-                    {/* Clickable indicator */}
-                    <div className="self-end w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity duration-300">
-                      <ChevronRight className="h-5 w-5 text-primary" />
-                    </div>
                   </CardContent>
                 </Card>
               </Link>
             </motion.div>
           ))}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="text-center mt-12"
-        >
-          <Button variant="outline" asChild className="rounded-full border-primary/20 hover:bg-primary/10 px-6">
-            <Link href="/" className="flex items-center gap-2">
-              Read More
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </Button>
         </motion.div>
       </div>
     </section>

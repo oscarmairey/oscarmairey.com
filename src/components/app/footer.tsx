@@ -15,11 +15,6 @@ export default function Footer() {
 
   return (
     <footer className="py-12 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-background to-transparent"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
-      </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -33,7 +28,6 @@ export default function Footer() {
             <Link href="#home" className="text-xl font-bold tracking-tight">
               Oscar<span className="text-primary">Mairey</span>
             </Link>
-            <p className="text-foreground/60 mt-2">Sharing stories and reflections</p>
           </div>
 
           <div className="flex space-x-4">
@@ -54,7 +48,7 @@ export default function Footer() {
               className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors duration-300"
             >
               <Link
-                href="https://linkedin.com/in/oscar-mairey"
+                href="https://linkedin.com/in/oscarmairey"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
@@ -99,9 +93,8 @@ export default function Footer() {
           <p className="text-foreground/60 text-sm">© {currentYear} Oscar Mairey. All rights reserved.</p>
 
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link href="#" className="text-sm text-foreground/60 hover:text-primary transition-colors">
-            </Link>
-            <Link href="#" className="text-sm text-foreground/60 hover:text-primary transition-colors">
+            <Link href="mailto:o@mairey.net" className="text-sm text-foreground/60 hover:text-primary transition-colors">
+              Contact
             </Link>
           </div>
         </motion.div>

@@ -101,21 +101,15 @@ export default {
   		},
   		fontFamily: {
   			sans: [
-  				'Inter',
+  				'var(--font-dm-sans)',
   				'system-ui',
   				'sans-serif'
   			],
-  			secondary: [
-  				'DM Sans',
-  				'system-ui',
-  				'sans-serif'
-  			],
-  			serif: [
-  				'Merriweather',
+  			heading: [
+  				'var(--font-instrument-serif)',
+  				'Georgia',
   				'serif'
   			],
-  			heading: ['var(--font-raleway)', 'system-ui'],
-  			raleway: ['var(--font-raleway)', 'system-ui'],
   		},
   		borderRadius: {
   			DEFAULT: '4px',

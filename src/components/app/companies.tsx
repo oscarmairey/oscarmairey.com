@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Trophy, Users, Coins, Code, Lightbulb, Presentation, ChevronRight } from "lucide-react"
+import { Trophy, Users, Coins, Code, Lightbulb, Presentation } from "lucide-react"
 import { motion } from "framer-motion"
 import { useInView } from "react-intersection-observer"
 import Link from "next/link"
@@ -9,53 +9,76 @@ import Link from "next/link"
 const skills = [
   {
     name: "Software Development",
-    icon: <Code className="h-10 w-10 text-primary" />,
-    description:
-      "Full-stack development with expertise in React, Next.js, and TypeScript. Building scalable applications with modern tech stacks and best practices in web3.",
+    icon: <Code className="h-6 w-6 text-primary" />,
+    description: "Full-stack React, Next.js, and TypeScript. Built scalable web3 applications.",
     recognition: "Built Raizer App",
     url: "https://raizer.fi",
   },
   {
     name: "Blockchain Development",
-    icon: <Users className="h-10 w-10 text-primary" />,
-    description:
-      "Developing smart contracts and DApps using Solidity and Web3.js. Experience with various blockchain protocols and DeFi implementations.",
+    icon: <Users className="h-6 w-6 text-primary" />,
+    description: "Smart contracts, DApps, and DeFi with Solidity and Web3.js.",
     recognition: "Hackathon Winner",
     url: "https://www.linkedin.com/posts/chainraizer_this-year-the-chainraizer-team-flew-to-the-activity-7311027473746386945-hXx4?",
   },
   {
     name: "Machine Learning",
-    icon: <Lightbulb className="h-10 w-10 text-primary" />,
-    description:
-      "Implementing cutting-edge ML models and AI algorithms. Experience with PyTorch, TensorFlow, and large language models for practical applications.",
+    icon: <Lightbulb className="h-6 w-6 text-primary" />,
+    description: "PyTorch, TensorFlow, and LLMs applied to real-world problems.",
     recognition: "Automated ML Algorithms",
-    url: "",
   },
   {
     name: "Public Speaking",
-    icon: <Presentation className="h-10 w-10 text-primary" />,
-    description:
-      "Delivering keynotes and workshops on blockchain, AI, and innovation. Regular speaker at tech conferences and universities about emerging technologies.",
+    icon: <Presentation className="h-6 w-6 text-primary" />,
+    description: "Keynotes and workshops on blockchain, AI, and innovation at conferences worldwide.",
     recognition: "CES Speaker",
     url: "https://www.linkedin.com/posts/oscar-mairey_je-naurais-pas-du-%C3%AAtre-sur-cette-sc%C3%A8ne-activity-7018150681257639937-avYF?",
   },
   {
     name: "Communications",
-    icon: <Coins className="h-10 w-10 text-primary" />,
-    description:
-      "Crafting compelling narratives and technical content. Experienced in technical writing, documentation, and bridging complex ideas to diverse audiences.",
-    recognition: "Web3 Communication Manager Role",
-    url: "",
+    icon: <Coins className="h-6 w-6 text-primary" />,
+    description: "Technical writing and bridging complex ideas for diverse audiences.",
+    recognition: "Web3 Communication Manager",
   },
   {
     name: "Community Building",
-    icon: <Trophy className="h-10 w-10 text-primary" />,
-    description:
-      "Growing and managing tech communities with thousands of members. Creating engaging environments for developers, entrepreneurs, and tech enthusiasts.",
+    icon: <Trophy className="h-6 w-6 text-primary" />,
+    description: "Growing and managing tech communities with hundreds of thousands of members.",
     recognition: "Managed 500k Community",
     url: "https://ta-da.io",
   },
 ]
+
+function SkillCard({ skill }: { skill: typeof skills[number] }) {
+  const content = (
+    <Card className="group overflow-hidden border border-border/50 bg-card h-full flex flex-col relative hover:shadow-md transition-shadow duration-300">
+      <CardContent className="flex-1 p-6 flex flex-col">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            {skill.icon}
+          </div>
+          <div>
+            <h3 className="text-xl font-bold group-hover:text-primary transition-colors duration-300">
+              {skill.name}
+            </h3>
+            <span className="text-sm font-medium text-primary">{skill.recognition}</span>
+          </div>
+        </div>
+        <p className="text-foreground/70 flex-1">{skill.description}</p>
+      </CardContent>
+    </Card>
+  )
+
+  if (skill.url) {
+    return (
+      <Link href={skill.url} target="_blank" rel="noopener noreferrer" className="block h-full">
+        {content}
+      </Link>
+    )
+  }
+
+  return content
+}
 
 export default function Companies() {
   const [ref, inView] = useInView({
@@ -67,9 +90,7 @@ export default function Companies() {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
+      transition: { staggerChildren: 0.15 },
     },
   }
 
@@ -84,10 +105,9 @@ export default function Companies() {
 
   return (
     <section id="companies" className="py-24 relative overflow-hidden">
-      {/* Background Elements */}
       <div className="absolute inset-0 -z-10 bg-muted/30 dark:bg-muted/10">
-        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-background to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-background to-transparent"></div>
+        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-background to-transparent" />
+        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-background to-transparent" />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -96,47 +116,21 @@ export default function Companies() {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6 }}
-          className="max-w-3xl mx-auto text-center mb-16"
+          className="mb-16"
         >
-          <span className="inline-block px-3 py-1 text-sm font-medium bg-primary/10 text-primary rounded-full mb-4">
-            Skills
-          </span>
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">Jack of All Trades</h2>
-          <p className="text-foreground/70 text-lg">I&apos;ve developed diverse skill set built through passion and practice</p>
+          <p className="text-sm font-medium uppercase tracking-widest text-primary mb-3">What I do</p>
+          <h2 className="text-3xl md:text-5xl font-heading">Jack of All Trades</h2>
         </motion.div>
 
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate={inView ? "visible" : "hidden"}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
         >
           {skills.map((skill, index) => (
             <motion.div key={index} variants={itemVariants}>
-              <Link href={skill.url} className="block h-full cursor-pointer">
-                <Card className="group overflow-hidden border-none bg-background/50 backdrop-blur-sm shadow-md h-full flex flex-col relative hover:shadow-md transition-all duration-300">
-                  <CardContent className="flex-1 p-6 flex flex-col">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 rounded-lg bg-primary/10 relative overflow-hidden">
-                        <div className="transition-opacity duration-300 group-hover:opacity-0">{skill.icon}</div>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <ChevronRight className="h-10 w-10 text-primary" />
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold group-hover:text-primary transition-colors duration-300">
-                          {skill.name}
-                        </h3>
-                        <span className="text-sm font-medium text-primary">{skill.recognition}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-foreground/70 flex-1">{skill.description}</p>
-
-                    {/* Removed the bottom right chevron indicator */}
-                  </CardContent>
-                </Card>
-              </Link>
+              <SkillCard skill={skill} />
             </motion.div>
           ))}
         </motion.div>
@@ -144,4 +138,3 @@ export default function Companies() {
     </section>
   )
 }
-

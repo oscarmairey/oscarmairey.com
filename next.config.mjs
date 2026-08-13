@@ -1,9 +1,6 @@
-import nextra from 'nextra'
- 
-const withNextra = nextra({
-  theme: './theme.tsx',
-  themeConfig: './theme.config.jsx'
-})
- 
-export default withNextra()
- 
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'standalone',
+}
+
+export default nextConfig
