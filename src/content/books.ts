@@ -1,4 +1,6 @@
-/** Books. One personal sentence each, never a summary of the book.
+/** Books. One personal sentence each, never a summary of the book, and never
+ *  a line that stages the reader instead: no reading rituals, no ranking of
+ *  oneself against the text. The note says something, or it goes.
  *  `year` is the year read, not the year published. Where the year is not
  *  confirmed yet it is left empty and simply does not render. */
 
@@ -13,14 +15,14 @@ export const books: Book[] = [
   {
     title: "Meditations",
     author: "Marcus Aurelius",
-    year: "reread most years",
-    note: "I read it before I had anything to apply it to, which is probably why it stuck. It's the only book here I argue with.",
+    year: "",
+    note: "I read it before I had anything to apply it to, which is probably why it stuck.",
   },
   {
     title: "The Man Who Solved the Market",
     author: "Gregory Zuckerman",
     year: "",
-    note: "I read it as an engineering story. Most of Renaissance's edge looks like infrastructure discipline.",
+    note: "Most of Renaissance's edge looks like infrastructure discipline.",
   },
   {
     title: "Reminiscences of a Stock Operator",
