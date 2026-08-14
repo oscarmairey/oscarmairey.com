@@ -114,7 +114,14 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
     if (draft.id !== null) await store.updateItem(id, slug, input);
 
     if (current) await sweep(current.body, input.body);
-    published();
+
+    /* No revalidation here. A save happens every few seconds while Oscar is
+       typing, and Next answers an action by re-rendering the page that called
+       it — which would remount the editor under him and throw away whatever the
+       browser had put in the document since. Nothing public needs it: the pages
+       are dynamic, they read on request, and the write already emptied the
+       cache they read through. Publishing and deleting revalidate, because
+       those are the moments a list changes. */
     return { ok: true, id, date: input.date };
   } catch (error) {
     if (store.isSlugTaken(error)) {
