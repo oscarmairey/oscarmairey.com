@@ -215,11 +215,6 @@
   .section-head .more {
     margin-top: 0;
   }
-  .hook {
-    margin-top: 0.3rem;
-    font-size: var(--t-s);
-    color: var(--ink-3);
-  }
 
   /* ---- entry lists ------------------------------------------------- */
   .rows {
@@ -232,9 +227,6 @@
   }
   .rows.tight > li + li {
     margin-top: 0.55rem;
-  }
-  .rows.record > li + li {
-    margin-top: 2.1rem;
   }
   .line {
     display: flex;
@@ -266,14 +258,6 @@
     font-size: var(--t-s);
     line-height: 1.55;
     color: var(--ink-2);
-  }
-  .role {
-    margin-top: 0.15rem;
-    font-size: var(--t-s);
-    color: var(--ink-3);
-  }
-  .rec {
-    margin-top: 0.6rem;
   }
   .more {
     display: inline-block;
@@ -322,7 +306,6 @@
     color: var(--ink-3);
   }
   .prose a,
-  .rec a,
   .note a {
     color: var(--oxide);
     text-decoration: underline;
@@ -332,7 +315,6 @@
     transition: text-decoration-color 120ms var(--ease);
   }
   .prose a:hover,
-  .rec a:hover,
   .note a:hover {
     text-decoration-color: var(--oxide);
   }

@@ -1,28 +1,28 @@
 import type { MetadataRoute } from "next";
 import { site } from "@/content/site";
-import { publicCompanies, publishedWritings } from "@/lib/content";
+import { published } from "@/lib/content";
+import { sectionList } from "@/lib/labels";
 
 /** Public routes only: nothing under /admin is listed here, and robots.ts
  *  disallows it besides. */
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [writings, companies] = await Promise.all([publishedWritings(), publicCompanies()]);
+  const lists = await Promise.all(sectionList.map((spec) => published(spec.section)));
 
-  const routes = ["", "/writings", "/books", "/building"].map((path) => ({
-    url: `${site.url}${path}`,
+  const home = { url: site.url, lastModified: new Date() };
+
+  const routes = sectionList.map((spec) => ({
+    url: `${site.url}${spec.route}`,
     lastModified: new Date(),
   }));
 
-  const posts = writings.map((w) => ({
-    url: `${site.url}/writings/${w.slug}`,
-    lastModified: new Date(`${w.date}T00:00:00Z`),
-  }));
+  const entries = sectionList.flatMap((spec, i) =>
+    lists[i].map((item) => ({
+      url: `${site.url}${spec.route}/${item.slug}`,
+      lastModified: new Date(`${item.date}T00:00:00Z`),
+    })),
+  );
 
-  const record = companies.map((c) => ({
-    url: `${site.url}/building/${c.slug}`,
-    lastModified: new Date(),
-  }));
-
-  return [...routes, ...posts, ...record];
+  return [home, ...routes, ...entries];
 }

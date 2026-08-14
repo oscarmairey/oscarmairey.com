@@ -1,5 +1,5 @@
 import { site } from "@/content/site";
-import { publishedWritings } from "@/lib/content";
+import { published } from "@/lib/content";
 import { plain } from "@/lib/inline";
 
 const escape = (s: string) =>
@@ -9,12 +9,13 @@ const escape = (s: string) =>
  *  in the feed without a deploy. */
 export const dynamic = "force-dynamic";
 
+/** Notes only. A book and a company are a record, not a publication. */
 export async function GET() {
-  const published = await publishedWritings();
+  const notes = await published("notes");
 
-  const items = published
+  const items = notes
     .map((w) => {
-      const url = `${site.url}/writings/${w.slug}`;
+      const url = `${site.url}/notes/${w.slug}`;
       return `    <item>
       <title>${escape(w.title)}</title>
       <link>${url}</link>
