@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Entries from "@/components/site/entries";
 import { site } from "@/content/site";
 import { published } from "@/lib/content";
@@ -11,7 +10,8 @@ import { sections } from "@/lib/labels";
 export const dynamic = "force-dynamic";
 
 /** An index is titles and dates. Whatever a row has to say for itself it says
- *  on its own page, one click away. */
+ *  on its own page, one click away, and the way to the whole list is where it
+ *  has always been: in the masthead. */
 const SHOWN = 5;
 
 function Index({ section, items }: { section: Section; items: Item[] }) {
@@ -19,12 +19,7 @@ function Index({ section, items }: { section: Section; items: Item[] }) {
 
   return (
     <section className="section">
-      <div className="section-head">
-        <h2>{spec.plural}</h2>
-        <Link className="more" href={spec.route}>
-          All {spec.plural.toLowerCase()}
-        </Link>
-      </div>
+      <h2>{spec.plural}</h2>
       <Entries section={section} items={items.slice(0, SHOWN)} tight />
     </section>
   );
