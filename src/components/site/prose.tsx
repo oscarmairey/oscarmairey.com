@@ -23,6 +23,15 @@ export default function Prose({ blocks }: { blocks: Block[] }) {
           /* A plain <img>: the file was stored as it arrived, and the size it
              was measured at is in its name, so there is nothing to optimise at
              request time and no loader to configure. */
+          case "list":
+            return (
+              <ul key={i}>
+                {block.items.map((item, n) => (
+                  <li key={n}>{inline(item)}</li>
+                ))}
+              </ul>
+            );
+
           case "image":
             return (
               <figure key={i}>

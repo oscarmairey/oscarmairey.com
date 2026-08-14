@@ -64,9 +64,10 @@ list line carries, the metadata a page carries, the fields the editor shows — 
 `src/lib/labels.tsx` and nowhere else. `src/components/site/entries.tsx` is the only list on
 the site and `src/components/site/entry.tsx` the only page.
 
-Bodies use a small block model (`p`, `h2`, `quote`, `note`) with a tiny inline formatter in
-`src/lib/inline.tsx` supporting `[label](url)`, `*emphasis*` and `[^1]` note markers. No MDX
-toolchain. What is left in `src/content` — the bio, the links — still changes with a deploy.
+Bodies use a small block model (`p`, `h2`, `quote`, `note`, `list`, `image`) with a tiny
+inline formatter in `src/lib/inline.tsx` supporting `[label](url)`, `**bold**`, `*italic*`,
+`__underlined__` and `[^1]` note markers. A list is stored as its lines, each behind `* `.
+No MDX toolchain. What is left in `src/content` — the bio, the links — still changes with a deploy.
 
 The editor at `/admin` is one password and no chrome of its own. It sits inside the site's
 shell, on the site's column, under the site's masthead: there is no second navigation.
@@ -75,7 +76,8 @@ shell, on the site's column, under the site's masthead: there is no second navig
 Editing happens inside the page. The editor mounts the same `<Entry>` the public route
 mounts and hands it editable regions, so there is no form and no preview tab: the title, the
 line under it and every block of the body are typed where they will be read. A right click,
-or a selection on a touch screen, offers heading, quote, sidenote, emphasis and link.
+or a selection, offers heading, quote, list, sidenote, image, bold, italic, underline and
+link; Cmd or Ctrl with B, I, U and K reach the four that are text.
 `src/app/admin/editable.tsx` is the whole of that machinery, dependency-free: it renders the
 inline tokens live, reads them back as source, and keeps the caret still by writing a
 region's content exactly once. The stored format never changes.
@@ -128,8 +130,10 @@ same face. There is no second family and no icon font.
 | `--t-l` | 20.3 → 25.3px | section headings, article headings, running head |
 | `--t-xl` | 25.3 → 33.8px | page titles only |
 
-Weights: 400 body, 500 headings and list titles, 600 page titles. Italic for emphasis only.
-Scale ratio 1.333, fluid between a 360px and a 1280px viewport.
+Weights: 400 body, 500 headings and list titles, 600 page titles. Inside prose, three marks
+and no more: **bold** for a term being named, *italic* for a word being weighed, and an
+underline in ink for the rare thing that is neither. An underline in oxide is a link and
+nothing else. Scale ratio 1.333, fluid between a 360px and a 1280px viewport.
 
 If you are adding a style and it does not map to one of those four sizes and three weights,
 the answer is no. That discipline is the design.

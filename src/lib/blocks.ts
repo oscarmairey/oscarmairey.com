@@ -9,6 +9,7 @@
  *    > — Source
  *    [^1]: Note text      sidenote, floated beside the paragraph carrying [^1]
  *    ![Caption](name.png) an uploaded image, served from /media
+ *    * One item           a bullet; consecutive lines are one list
  *    anything else        paragraph
  *
  *  Inline syntax inside any block — [label](url), *emphasis*, [^1] — is handled
@@ -23,9 +24,12 @@ export type Block =
   | { kind: "quote"; text: string; source: string }
   | { kind: "note"; n: number; text: string }
   /** `src` is the stored file name; `text` is the caption, and the alt text. */
-  | { kind: "image"; src: string; text: string };
+  | { kind: "image"; src: string; text: string }
+  | { kind: "list"; items: string[] };
 
 const NOTE = /^\[\^(\d+)\]:\s*/;
+/** A bullet needs the space: `*emphasis*` has none and stays inline. */
+const BULLET = /^\*[ \t]+/;
 const IMAGE = /^!\[(.*)\]\(([^)]+)\)$/;
 const SOURCE = /^—\s*/;
 
@@ -52,6 +56,17 @@ export function parseBody(body: string): Block[] {
 
       const image = unwrap(lines).match(IMAGE);
       if (image) return { kind: "image", src: image[2].trim(), text: image[1].trim() };
+
+      if (BULLET.test(lines[0])) {
+        return {
+          kind: "list",
+          items: lines
+            .join("\n")
+            .split(/\n(?=\*[ \t])/)
+            .map((item) => unwrap(item.replace(BULLET, "").split("\n")))
+            .filter(Boolean),
+        };
+      }
 
       if (lines[0].startsWith("## ")) {
         return { kind: "h2", text: unwrap([lines[0].slice(3), ...lines.slice(1)]) };
@@ -92,6 +107,8 @@ export function serializeBlocks(blocks: Block[]): string {
           return `[^${block.n}]: ${block.text}`;
         case "image":
           return `![${block.text}](${block.src})`;
+        case "list":
+          return block.items.map((item) => `* ${item}`).join("\n");
         default:
           return block.text;
       }
@@ -112,7 +129,7 @@ const WPM = 200;
 /** The reading time the page prints, computed from the body at save time so it
  *  can never disagree with what is written. Empty body, empty string. */
 export function readingTime(body: string): string {
-  const words = plain(body.replace(/^\s*(##|>|\[\^\d+\]:)\s*/gm, ""))
+  const words = plain(body.replace(/^\s*(##|>|\*[ \t]|\[\^\d+\]:)\s*/gm, ""))
     .split(/\s+/)
     .filter(Boolean).length;
   return words === 0 ? "" : `${Math.max(1, Math.round(words / WPM))} min`;

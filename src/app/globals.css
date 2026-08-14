@@ -304,6 +304,21 @@ a.t:focus-visible {
   font-weight: 500;
   line-height: 1.25;
 }
+/* Preflight took the markers off every list on the site; prose is the one
+   place that wants them back. In the measure, at the size of the text around
+   them, with the dot as quiet as a date. */
+.prose ul {
+  margin: 1.15em 0;
+  padding-left: 1.3em;
+  list-style: disc;
+}
+.prose li + li {
+  margin-top: 0.3em;
+}
+.prose li::marker {
+  color: var(--ink-3);
+}
+
 .prose blockquote {
   margin: 1.8rem 0 1.8rem 1.8rem;
   color: var(--ink-2);
@@ -316,6 +331,15 @@ a.t:focus-visible {
   font-size: var(--t-s);
   color: var(--ink-3);
 }
+/* Underlined text, not a link: the colour is the difference. A link in prose
+   is oxide and answers the cursor; this is ink and does not. */
+.prose u {
+  text-decoration: underline;
+  text-decoration-color: var(--rule-firm);
+  text-decoration-thickness: 0.055em;
+  text-underline-offset: 0.16em;
+}
+
 .prose a,
 .note a {
   color: var(--oxide);

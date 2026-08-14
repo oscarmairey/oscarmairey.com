@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "om_session",
+      "value": "v1.1789336056062.3IfgkUTHtSepCW4DKJTHhZnuwk8Kq1mkxWbL4w2PFMo",
+      "domain": "dev.oscarmairey.com",
+      "path": "/",
+      "expires": 1789336056.178098,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

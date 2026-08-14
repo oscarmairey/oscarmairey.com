@@ -34,7 +34,9 @@ export function inlineHtml(text: string): string {
 
     if (m[1]) out += `<sup class="ref" data-ref="${m[1]}">${m[1]}</sup>`;
     else if (m[2] && m[3]) out += `<a href="${escapeHtml(m[3])}">${escapeHtml(m[2])}</a>`;
-    else if (m[4]) out += `<em>${escapeHtml(m[4])}</em>`;
+    else if (m[4]) out += `<strong>${escapeHtml(m[4])}</strong>`;
+    else if (m[5]) out += `<u>${escapeHtml(m[5])}</u>`;
+    else if (m[6]) out += `<em>${escapeHtml(m[6])}</em>`;
 
     last = at + m[0].length;
   }
@@ -80,6 +82,17 @@ function inlineOf(node: Node, skip?: (el: HTMLElement) => boolean): string {
         out += inner.trim() ? `*${inner.trim()}*` : inner;
         break;
       }
+      case "STRONG":
+      case "B": {
+        const inner = inlineOf(child, skip);
+        out += inner.trim() ? `**${inner.trim()}**` : inner;
+        break;
+      }
+      case "U": {
+        const inner = inlineOf(child, skip);
+        out += inner.trim() ? `__${inner.trim()}__` : inner;
+        break;
+      }
       default:
         out += inlineOf(child, skip);
     }
@@ -101,6 +114,170 @@ const keepBreaks = (text: string) =>
 
 const isNote = (el: HTMLElement) => el.classList.contains("sn");
 
+/** Blocks that are one line by definition: the format collapses whatever is
+ *  typed into them onto a single line, so a break inside one is a break that
+ *  will not survive being saved. */
+const ONE_LINE = new Set(["H2", "FIGCAPTION", "BLOCKQUOTE"]);
+
+/** Enter at the end of a heading starts a paragraph under it, not another
+ *  heading — a heading ends where it ends. Mid-heading it splits, and what was
+ *  after the caret becomes that paragraph. A caption and a quote behave the
+ *  same way, for the same reason: they are single lines too.
+ *
+ *  Shift+Enter in any of them does nothing at all. A line break there would be
+ *  collapsed away the moment it was saved, and a key that appears to work and
+ *  does not is worse than one that does nothing.
+ *
+ *  Everywhere else — a paragraph, a bullet — the browser is asked for the two
+ *  behaviours by name, because insertParagraph is also what makes the next
+ *  bullet and what leaves the list when the bullet it is on is empty. */
+/** A paragraph becomes a one-item list, keeping whatever was in it. */
+export function listFrom(block: HTMLElement): HTMLUListElement {
+  const ul = document.createElement("ul");
+  const li = document.createElement("li");
+  li.append(...Array.from(block.childNodes));
+  if (!li.textContent?.trim()) li.innerHTML = "<br>";
+  ul.append(li);
+  block.replaceWith(ul);
+  return ul;
+}
+
+/** And back: one paragraph per bullet. */
+export function listInto(ul: HTMLElement): HTMLElement[] {
+  const paragraphs = Array.from(ul.querySelectorAll("li")).map((li) => {
+    const p = document.createElement("p");
+    p.append(...Array.from(li.childNodes));
+    if (!p.textContent?.trim()) p.innerHTML = "<br>";
+    return p;
+  });
+  ul.replaceWith(...paragraphs);
+  return paragraphs;
+}
+
+export function caretInto(el: HTMLElement, atEnd = false) {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(!atEnd);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
+export function onEnter(host: HTMLElement, shift: boolean) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const node = selection.anchorNode;
+  let el = node instanceof HTMLElement ? node : (node?.parentElement ?? null);
+  if (!el || !host.contains(el)) return;
+
+  let block: HTMLElement = el;
+  const figure = el.closest("figure");
+  if (figure) block = figure;
+  else while (block.parentElement && block.parentElement !== host) block = block.parentElement;
+
+  /* A bullet: Enter makes the next one, and an empty one leaves the list. The
+     browser's own list command was doing neither reliably — it nested the list
+     inside the paragraph it came from and pulled the paragraph after it in — so
+     the list is built and unbuilt here, like everything else. */
+  if (block.tagName === "UL" || block.tagName === "OL") {
+    const item = el.closest("li");
+    if (!item) return;
+    if (shift) return void document.execCommand("insertLineBreak");
+
+    if (!item.textContent?.trim()) {
+      const paragraph = document.createElement("p");
+      paragraph.innerHTML = "<br>";
+      block.after(paragraph);
+      item.remove();
+      if (!block.querySelector("li")) block.remove();
+      caretInto(paragraph);
+      return;
+    }
+
+    const rest = document.createRange();
+    const at = selection.getRangeAt(0);
+    rest.setStart(at.endContainer, at.endOffset);
+    rest.setEnd(item, item.childNodes.length);
+
+    const next = document.createElement("li");
+    next.append(rest.extractContents());
+    if (!next.textContent?.trim()) next.innerHTML = "<br>";
+    item.after(next);
+    caretInto(next);
+    return;
+  }
+
+  if (!ONE_LINE.has(block.tagName)) {
+    document.execCommand(shift ? "insertLineBreak" : "insertParagraph");
+    return;
+  }
+  if (shift) return;
+
+  /* The line the caret is actually in: the heading itself, the caption, or one
+     of the two paragraphs a quote is made of. */
+  let line: HTMLElement = el;
+  while (line.parentElement && line.parentElement !== block && line !== block) {
+    line = line.parentElement;
+  }
+  if (line === block && block.tagName === "FIGURE") {
+    line = block.querySelector("figcaption") ?? block;
+  }
+
+  const range = selection.getRangeAt(0);
+  const tail = document.createRange();
+  tail.setStart(range.endContainer, range.endOffset);
+  tail.setEnd(line, line.childNodes.length);
+
+  const paragraph = document.createElement("p");
+  paragraph.append(tail.extractContents());
+  /* A trailing break the browser was keeping the old line open with is not the
+     new line's business. */
+  while (
+    paragraph.firstChild?.nodeName === "BR" ||
+    (paragraph.firstChild?.nodeType === Node.TEXT_NODE && !paragraph.firstChild.nodeValue?.trim())
+  ) {
+    paragraph.firstChild.remove();
+  }
+  if (!paragraph.textContent?.trim()) paragraph.innerHTML = "<br>";
+  block.after(paragraph);
+
+  const put = document.createRange();
+  put.setStart(paragraph, 0);
+  put.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(put);
+}
+
+/** `* ` at the head of a paragraph is a bullet asking to be one. Taken at the
+ *  moment the space is typed, and handed to the browser, which knows how to
+ *  make a list and how to leave one when the last bullet is empty. */
+export function autoList(host: HTMLElement): boolean {
+  const selection = window.getSelection();
+  if (!selection?.isCollapsed || selection.rangeCount === 0) return false;
+
+  const node = selection.anchorNode;
+  if (!node) return false;
+
+  let block = node instanceof HTMLElement ? node : (node.parentElement ?? null);
+  while (block && block.parentElement !== host) block = block.parentElement;
+  if (!block || block.tagName !== "P") return false;
+
+  /* Everything in the block up to the caret, however the browser has arranged
+     it — a fresh paragraph holds a <br> the text is typed around, so asking
+     whether the text node comes first is asking the wrong question. And the
+     space that just ended the bullet is a non-breaking one: a browser keeps a
+     trailing space visible by making it one. */
+  const before = document.createRange();
+  before.setStart(block, 0);
+  before.setEnd(node, selection.anchorOffset);
+  if (before.toString().replace(/\u00a0/g, " ") !== "* ") return false;
+
+  before.deleteContents();
+  caretInto(listFrom(block).querySelector("li") as HTMLElement);
+  return true;
+}
+
 /** What is written in the host, as blocks. */
 export function blocksFromDom(host: HTMLElement): Block[] {
   const out: Block[] = [];
@@ -113,6 +290,14 @@ export function blocksFromDom(host: HTMLElement): Block[] {
       const name = decodeURIComponent(src.replace(/^\/media\//, ""));
       const caption = el.querySelector("figcaption");
       if (name) out.push({ kind: "image", src: name, text: caption ? collapse(inlineOf(caption)) : "" });
+      continue;
+    }
+
+    if (el.tagName === "UL" || el.tagName === "OL") {
+      const items = Array.from(el.querySelectorAll("li"))
+        .map((li) => collapse(inlineOf(li)))
+        .filter(Boolean);
+      if (items.length) out.push({ kind: "list", items });
       continue;
     }
 
@@ -180,6 +365,9 @@ export function bodyHtml(blocks: Block[]): string {
       case "image":
         out += figureHtml(block);
         break;
+      case "list":
+        out += `<ul>${block.items.map((item) => `<li>${inlineHtml(item)}</li>`).join("")}</ul>`;
+        break;
       default: {
         const next = blocks[i + 1];
         const note = next?.kind === "note" ? noteHtml(next) : "";
@@ -193,17 +381,25 @@ export function bodyHtml(blocks: Block[]): string {
 
 /* ---- the body ------------------------------------------------------------ */
 
+/** What the four shortcuts do, which is what the menu does. Bold, italic and
+ *  underline are the browser's own commands, so the selection and the undo
+ *  stack survive them; the link asks the editor, because it has to ask for a
+ *  URL first. */
+const SHORTCUTS: Record<string, string> = { b: "bold", i: "italic", u: "underline" };
+
 export function Body({
   hostRef,
   blocks,
   onChange,
   onFiles,
+  onLink,
 }: {
   /** The editor keeps it: every formatting action is a DOM edit in here. */
   hostRef?: React.RefObject<HTMLDivElement | null>;
   blocks: Block[];
   onChange: (blocks: Block[]) => void;
   onFiles: (files: File[]) => void;
+  onLink: () => void;
 }) {
   const own = useRef<HTMLDivElement>(null);
   const host = hostRef ?? own;
@@ -214,7 +410,15 @@ export function Body({
      typed into it. */
   const initial = useRef({ __html: bodyHtml(blocks) });
 
-  const read = () => host.current && onChange(blocksFromDom(host.current));
+  const read = () => {
+    if (!host.current) return;
+    autoList(host.current);
+    onChange(blocksFromDom(host.current));
+  };
+
+  useEffect(() => {
+    document.execCommand("defaultParagraphSeparator", false, "p");
+  }, []);
 
   return (
     <div
@@ -228,6 +432,32 @@ export function Body({
       aria-multiline="true"
       aria-label="Body"
       onInput={read}
+      onKeyDown={(event) => {
+        if (!host.current) return;
+
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onEnter(host.current, event.shiftKey);
+          read();
+          return;
+        }
+
+        /* Cmd on a Mac, Ctrl everywhere else. Save is not ours: it belongs to
+           the page and is caught above this. */
+        if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+        const key = event.key.toLowerCase();
+
+        if (key === "k") {
+          event.preventDefault();
+          onLink();
+          return;
+        }
+        if (SHORTCUTS[key]) {
+          event.preventDefault();
+          document.execCommand(SHORTCUTS[key]);
+          read();
+        }
+      }}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         const dropped = images(event.dataTransfer.files);
@@ -306,7 +536,14 @@ export function Region({
         onChange((event.currentTarget.textContent ?? "").replace(/ /g, " "))
       }
       onFocus={() => onFocus?.()}
-      onKeyDown={(event: React.KeyboardEvent) => event.key === "Enter" && event.preventDefault()}
+      onKeyDown={(event: React.KeyboardEvent) => {
+        /* A title has no formatting to apply, so the shortcuts that would apply
+           some are swallowed rather than left to the browser. */
+        if (event.key === "Enter") event.preventDefault();
+        if ((event.metaKey || event.ctrlKey) && "biuk".includes(event.key.toLowerCase())) {
+          event.preventDefault();
+        }
+      }}
       onPaste={(event: React.ClipboardEvent) => {
         event.preventDefault();
         document.execCommand(

@@ -9,7 +9,7 @@ import { formatDay } from "@/lib/format";
 import { itemOf, sections, type Draft, type EditField } from "@/lib/labels";
 import { ACCEPT, images, prepare } from "@/lib/media";
 import { deleteItem, saveItem, setItemPublished } from "./actions";
-import { Body, Region, blocksFromDom, figureHtml } from "./editable";
+import { Body, Region, blocksFromDom, caretInto, figureHtml, listFrom, listInto } from "./editable";
 
 /** The editor is the page. There is no form and no preview: what is on screen
  *  is <Entry>, the component the public route mounts, with its title, its line
@@ -31,7 +31,7 @@ type Props = { initial: Draft; live: boolean };
 const AUTOSAVE_MS = 3000;
 
 /** Where the menu opens, and what it is being asked about. */
-type Menu = { x: number; y: number; block: HTMLElement | null } | null;
+type Menu = { x: number; y: number; block: HTMLElement | null; onText: boolean } | null;
 
 /** What counts as a change. The reading time is left out because it is derived
  *  from the body, which is in here already. */
@@ -162,7 +162,8 @@ export default function Editor({ initial, live }: Props) {
   function open(x: number, y: number) {
     const block = blockAt();
     if (!block) return;
-    setMenu({ x, y, block });
+    const selection = window.getSelection();
+    setMenu({ x, y, block, onText: !!selection && !selection.isCollapsed });
   }
 
   /** Every formatting action is a DOM edit, made by the browser where it can
@@ -170,6 +171,13 @@ export default function Editor({ initial, live }: Props) {
    *  afterwards; nothing writes into the host from React. */
   function apply(run: () => void) {
     run();
+
+    /* The selection asked its question and has been answered: leave the caret
+       at the end of what was just changed rather than the text sitting there
+       highlighted, waiting to be typed over by accident. */
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) selection.collapseToEnd();
+
     reread();
     setMenu(null);
   }
@@ -184,7 +192,20 @@ export default function Editor({ initial, live }: Props) {
     selection?.addRange(range);
   }
 
-  const emphasis = () => apply(() => document.execCommand("italic"));
+  const mark = (command: string) => () => apply(() => document.execCommand(command));
+  function list() {
+    const block = menu?.block;
+    if (!block) return setMenu(null);
+
+    apply(() => {
+      if (block.tagName === "UL" || block.tagName === "OL") {
+        const paragraphs = listInto(block);
+        caretInto(paragraphs[paragraphs.length - 1], true);
+      } else {
+        caretInto(listFrom(block).querySelector("li") as HTMLElement, true);
+      }
+    });
+  }
 
   function link() {
     const href = window.prompt("Link to");
@@ -285,10 +306,20 @@ export default function Editor({ initial, live }: Props) {
       setMenu(null);
     };
 
+    /* A menu opened over a selection is about that selection. Delete it, type
+       over it, or click it away and the menu has nothing left to answer. */
+    const gone = () => {
+      if (!menu.onText) return;
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || selection.toString().trim() === "") setMenu(null);
+    };
+
     document.addEventListener("mousedown", close);
+    document.addEventListener("selectionchange", gone);
     window.addEventListener("scroll", close, true);
     return () => {
       document.removeEventListener("mousedown", close);
+      document.removeEventListener("selectionchange", gone);
       window.removeEventListener("scroll", close, true);
     };
   }, [menu]);
@@ -454,6 +485,7 @@ export default function Editor({ initial, live }: Props) {
                 blocks={opening}
                 onChange={took}
                 onFiles={(files) => void upload(files[0])}
+                onLink={link}
               />
             ),
             edit: editField,
@@ -481,6 +513,9 @@ export default function Editor({ initial, live }: Props) {
               <button type="button" onClick={quote}>
                 {kind === "BLOCKQUOTE" ? "Paragraph" : "Quote"}
               </button>
+              <button type="button" onClick={list}>
+                {kind === "UL" ? "Paragraph" : "List"}
+              </button>
               {kind === "P" && !menu.block?.querySelector(".sn") && (
                 <button type="button" onClick={sidenote}>
                   Sidenote
@@ -489,8 +524,14 @@ export default function Editor({ initial, live }: Props) {
               <button type="button" onClick={() => picker.current?.click()}>
                 Image
               </button>
-              <button type="button" onClick={emphasis}>
-                Emphasis
+              <button type="button" onClick={mark("bold")}>
+                Bold
+              </button>
+              <button type="button" onClick={mark("italic")}>
+                Italic
+              </button>
+              <button type="button" onClick={mark("underline")}>
+                Underline
               </button>
               <button type="button" onClick={link}>
                 Link

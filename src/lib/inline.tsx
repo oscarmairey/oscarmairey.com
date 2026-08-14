@@ -1,17 +1,20 @@
 import type { ReactNode } from "react";
 
-/** Minimal inline formatter for content strings. Deliberately tiny: it exists so
- *  the content files stay plain JSON that a future editor can round-trip.
+/** Minimal inline formatter for content strings. Deliberately tiny: five marks,
+ *  each one a shape that does not occur by accident.
  *
  *    [label](https://url)   external or internal link
  *    *emphasis*             <em>
+ *    **bold**               <strong>, tried before the single asterisk
+ *    __underlined__         <u>, in ink: an underline in oxide is a link
  *    [^1]                   sidenote marker
  *
  *  Anything else is rendered as text, so content can never inject markup. */
 
 /** Exported so the editor can render the same tokens into a contenteditable
  *  region and read them back out. One regex, one syntax, two renderers. */
-export const TOKEN = /\[\^(\d+)\]|\[([^\]]+)\]\(([^)]+)\)|\*([^*]+)\*/g;
+export const TOKEN =
+  /\[\^(\d+)\]|\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*/g;
 
 export function inline(text: string): ReactNode[] {
   const out: ReactNode[] = [];
@@ -41,7 +44,11 @@ export function inline(text: string): ReactNode[] {
         </a>,
       );
     } else if (m[4]) {
-      out.push(<em key={key++}>{m[4]}</em>);
+      out.push(<strong key={key++}>{m[4]}</strong>);
+    } else if (m[5]) {
+      out.push(<u key={key++}>{m[5]}</u>);
+    } else if (m[6]) {
+      out.push(<em key={key++}>{m[6]}</em>);
     }
 
     last = at + m[0].length;
@@ -62,5 +69,7 @@ export function plain(text: string): string {
   return text
     .replace(/\[\^\d+\]/g, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1");
 }
