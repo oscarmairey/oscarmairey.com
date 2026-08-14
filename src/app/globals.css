@@ -204,8 +204,6 @@ a.mast-name:hover {
 /* ---- entry lists ------------------------------------------------- */
 .rows {
   margin-top: 1.4rem;
-  list-style: none;
-  padding: 0;
 }
 .rows > li + li {
   margin-top: 1.15rem;

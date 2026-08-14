@@ -7,7 +7,7 @@ import Entry from "@/components/site/entry";
 import { parseBody, readingTime, serializeBlocks, type Block } from "@/lib/blocks";
 import { formatDay } from "@/lib/format";
 import { itemOf, sections, type Draft, type EditField } from "@/lib/labels";
-import { ACCEPT, imageSize, mediaUrl, prepare } from "@/lib/media";
+import { ACCEPT, images, imageSize, mediaUrl, prepare } from "@/lib/media";
 import { deleteItem, saveItem, setItemPublished } from "./actions";
 import { Region, selectionIn } from "./editable";
 
@@ -95,7 +95,13 @@ export default function Editor({ initial, live }: Props) {
 
   /* ---- what gets sent ---------------------------------------------------- */
 
-  const sending: Draft = { ...draft, body, readingTime: readingTime(body) };
+  /* The stamp prints a reading time for a note and nothing for the others, so
+     only a note pays for counting the words. The server does the same. */
+  const sending: Draft = {
+    ...draft,
+    body,
+    readingTime: spec.label === "note" ? readingTime(body) : "",
+  };
 
   const snapshot = snapshotOf(sending);
 
@@ -183,17 +189,21 @@ export default function Editor({ initial, live }: Props) {
 
   const bump = (row: Row, block: Block): Row => ({ id: row.id, v: row.v + 1, block });
 
-  const textOf = (block: Block) => block.text;
-  const withText = (block: Block, text: string): Block => ({ ...block, text });
-
-  /** The three parts a block can carry text in, addressed the same way. */
+  /** The parts a block can carry text in, addressed the same way. */
   const partOf = (block: Block, part: Part) =>
     part === "source" && block.kind === "quote" ? block.source : block.text;
 
   const withPart = (block: Block, part: Part, value: string): Block =>
     part === "source" && block.kind === "quote"
       ? { ...block, source: value }
-      : withText(block, value);
+      : { ...block, text: value };
+
+  const textOf = (block: Block) => partOf(block, "text");
+  const withText = (block: Block, text: string) => withPart(block, "text", text);
+
+  /** Where the caret goes after a block is rewritten: the same region, one
+     version on. Spelled once because it is spelled wrong easily. */
+  const nextKey = (row: Row, part: Part = "text") => `${row.id}:${part}:${row.v + 1}`;
 
   /** A note belongs to the paragraph it follows, the way <Prose> reads it. */
   const noteAfter = (list: Row[], i: number) =>
@@ -230,7 +240,7 @@ export default function Editor({ initial, live }: Props) {
       if (row.block.kind === "p") return;
       edit(
         rows.map((r, at) => (at === i ? bump(r, { kind: "p", text: textOf(r.block) }) : r)),
-        { key: `${row.id}:text:${row.v + 1}`, at: 0 },
+        { key: nextKey(row), at: 0 },
       );
       return;
     }
@@ -247,7 +257,7 @@ export default function Editor({ initial, live }: Props) {
     const to = next.findIndex((r) => r.id === target.id);
     next[to] = bump(target, withText(target.block, joined));
 
-    edit(next, { key: `${target.id}:text:${target.v + 1}`, at });
+    edit(next, { key: nextKey(target), at });
   }
 
   function onKeyDown(i: number, part: Part, event: React.KeyboardEvent<HTMLElement>, el: HTMLElement) {
@@ -293,15 +303,12 @@ export default function Editor({ initial, live }: Props) {
 
     edit(
       rows.map((r, at) => (at === menu.row ? bump(r, withPart(r.block, menu.part, next)) : r)),
-      {
-        key: `${row.id}:${menu.part}:${row.v + 1}`,
-        at: menu.start + before.length + chosen.length,
-      },
+      { key: nextKey(row, menu.part), at: menu.start + before.length + chosen.length },
     );
     setMenu(null);
   }
 
-  function turn(kind: Block["kind"]) {
+  function turn(kind: "h2" | "quote") {
     if (!menu) return;
     const row = rows[menu.row];
     const text = textOf(row.block);
@@ -314,7 +321,7 @@ export default function Editor({ initial, live }: Props) {
 
     edit(
       rows.map((r, at) => (at === menu.row ? bump(r, block) : r)),
-      { key: `${row.id}:text:${row.v + 1}`, at: menu.start },
+      { key: nextKey(row), at: menu.start },
     );
     setMenu(null);
   }
@@ -384,9 +391,6 @@ export default function Editor({ initial, live }: Props) {
       setBusy(false);
     }
   }
-
-  const images = (list: FileList | null) =>
-    Array.from(list ?? []).filter((file) => file.type.startsWith("image/"));
 
   function removeImage() {
     if (!menu) return;
@@ -512,6 +516,7 @@ export default function Editor({ initial, live }: Props) {
             onChange={(text) => change(i + 1, "note", text)}
             onKeyDown={(event, el) => onKeyDown(i + 1, "note", event, el)}
             onFocus={() => (active.current = i + 1)}
+            onFiles={(files) => void upload(files[0])}
           />
         </span>
       )}
@@ -525,7 +530,6 @@ export default function Editor({ initial, live }: Props) {
       const { src, text } = row.block;
       return (
         <figure key={key(row, "text")}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={mediaUrl(src)} alt={text} {...imageSize(src)} />
           <Region
             as="figcaption"
@@ -536,6 +540,7 @@ export default function Editor({ initial, live }: Props) {
             onChange={(caption) => change(i, "text", caption)}
             onKeyDown={(event, el) => onKeyDown(i, "text", event, el)}
             onFocus={() => (active.current = i)}
+            onFiles={(files) => void upload(files[0])}
           />
         </figure>
       );
@@ -571,6 +576,7 @@ export default function Editor({ initial, live }: Props) {
             onChange={(text) => change(i, "text", text)}
             onKeyDown={(event, el) => onKeyDown(i, "text", event, el)}
             onFocus={() => (active.current = i)}
+            onFiles={(files) => void upload(files[0])}
           />
           <Region
             key={key(row, "source")}
@@ -582,6 +588,8 @@ export default function Editor({ initial, live }: Props) {
             caret={at(key(row, "source"))}
             onChange={(text) => change(i, "source", text)}
             onKeyDown={(event, el) => onKeyDown(i, "source", event, el)}
+            onFocus={() => (active.current = i)}
+            onFiles={(files) => void upload(files[0])}
           />
         </blockquote>
       );

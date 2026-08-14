@@ -17,6 +17,10 @@ export const IMAGE_TYPES: Record<string, string> = {
 
 export const ACCEPT = Object.keys(IMAGE_TYPES).join(",");
 
+/** What the editor will take from a clipboard, a drop or a picker. */
+export const images = (files: FileList | null) =>
+  Array.from(files ?? []).filter((file) => file.type.startsWith("image/"));
+
 /** The cap the server enforces, on the file it actually receives. */
 export const MAX_BYTES = 8 * 1024 * 1024;
 

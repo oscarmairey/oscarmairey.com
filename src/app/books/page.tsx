@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Entries from "@/components/site/entries";
 import { published } from "@/lib/content";
+import { alternatesFor } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Books",
   description: "Books I've actually finished, with the reason each one stayed.",
-  alternates: { canonical: "/books" },
+  alternates: alternatesFor("/books"),
 };
 
 /** The author is stored and editable in /admin; the list does not print it. */

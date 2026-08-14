@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Entries from "@/components/site/entries";
 import { published } from "@/lib/content";
+import { alternatesFor } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Companies",
   description: "The record: what I'm building now, and everything before it.",
-  alternates: { canonical: "/companies" },
+  alternates: alternatesFor("/companies"),
 };
 
 /** The record, in the order Oscar set, which puts the current company first.

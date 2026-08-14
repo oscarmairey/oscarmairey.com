@@ -35,6 +35,17 @@ node scripts/hash-password.mjs            # invents one and prints it once
 The password itself is never stored anywhere but your password manager.
 Changing `SESSION_SECRET` signs every session out.
 
+## Checks
+
+```sh
+npx tsc --noEmit        # the check
+```
+
+There is no linter. `next lint` was removed in Next 16, and `eslint-config-next`
+16 crashes on a circular import, so the whole stack was doing nothing but
+sitting in package.json. TypeScript is the check until that is fixed; worth
+revisiting at the next Next upgrade.
+
 ## Migrations
 
 Every `.sql` file in `migrations/` is applied once, in filename order, each in
@@ -107,9 +118,11 @@ sidenote, emphasis and link. No editor library: `src/app/admin/editable.tsx` is
 all of it.
 
 Images are pasted, dropped on the page, or picked from the right-click menu.
-They are stored as they arrive under `UPLOADS_DIR` — `./uploads` here, a Docker
-volume in production, never `public/`, which the build would overwrite — and
-served from `/media/<name>`. An entry that stops mentioning a file takes it with
+The browser shrinks them first — 1600px on the long edge, webp at 0.85, GIFs
+untouched — because the server has no processing library. What it sends is
+stored as it arrives under `UPLOADS_DIR`: `./uploads` here, a Docker volume in
+production, never `public/`, which the build would overwrite. They are served
+from `/media/<name>`. An entry that stops mentioning a file takes it with
 it.
 
 Slugs and reading times are never typed, and neither is an order. The slug and

@@ -22,7 +22,6 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # The migrations travel with the image, so a release can apply its own schema:
 #   docker compose exec web node scripts/migrate.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations

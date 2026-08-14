@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { TOKEN } from "@/lib/inline";
+import { images } from "@/lib/media";
 
 /** The whole of the WYSIWYG machinery, in one file and no dependencies.
  *
@@ -244,12 +245,10 @@ export function Region({
     el.current.focus({ preventScroll: true });
     placeCaret(el.current, caret);
     /* Mount only: a remount is how a region is ever rewritten. */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Tag
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ref={el as any}
       className={className}
       data-region={region}
@@ -262,9 +261,7 @@ export function Region({
       onFocus={() => onFocus?.()}
       onPaste={(event) => {
         /* An image on the clipboard is an image in the page. */
-        const files = Array.from(event.clipboardData.files).filter((file) =>
-          file.type.startsWith("image/"),
-        );
+        const files = images(event.clipboardData.files);
         if (files.length > 0 && onFiles) {
           event.preventDefault();
           onFiles(files);

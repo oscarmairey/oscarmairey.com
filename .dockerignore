@@ -2,6 +2,8 @@ node_modules
 .next
 .git
 uploads
+# The source the icons were generated from. Not part of the site.
+assets
 # Secrets must never reach the image; they arrive through env_file at runtime.
 .env
 .env.*

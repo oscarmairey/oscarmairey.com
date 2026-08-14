@@ -1,4 +1,4 @@
-import { invalidateContent } from "@/lib/content";
+import { COLUMNS as READ, invalidateContent } from "@/lib/content";
 import { query, queryOne } from "@/lib/db";
 import type { Draft, Label, Row } from "@/lib/labels";
 import { sections } from "@/lib/labels";
@@ -10,19 +10,15 @@ import { sections } from "@/lib/labels";
  *  One table, so one set of functions. What a label does differently is in
  *  src/lib/labels.tsx, not here. */
 
-const COLUMNS = `
-  id::int AS id,
-  slug,
-  title,
-  subtitle,
-  byline,
-  body,
-  period,
-  reading_time AS "readingTime",
+/** What the public site reads, plus the two things only the editor cares about.
+ *  Its date is the one actually stored, not the one a page falls back to. */
+const COLUMNS = `${READ},
   published,
   COALESCE(to_char(published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '') AS date
 `;
 
+/** The public order, with one difference: a draft has no publication date, and
+ *  the useful thing about it here is when it was last touched. */
 const orderFor = (label: Label) =>
   label === "note" ? "COALESCE(published_at, updated_at) DESC, id DESC" : "created_at DESC, id DESC";
 

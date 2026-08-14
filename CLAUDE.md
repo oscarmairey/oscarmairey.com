@@ -148,7 +148,7 @@ because it reads the pathname.
 ## SEO
 
 `metadataBase`, per-route canonicals, OpenGraph and Twitter cards (`src/app/opengraph-image.png`,
-regenerated from `public/photo.png`), JSON-LD `Person` with corrected `sameAs`, `sitemap.ts`,
+regenerated from `assets/photo.png`), JSON-LD `Person` with corrected `sameAs`, `sitemap.ts`,
 `robots.ts` and an RSS feed at `/feed.xml` carrying notes only. Title template:
 `%s · Oscar Mairey`.
 
@@ -160,9 +160,10 @@ were wrong and are gone. All three open in a new tab; the email address does not
 
 Two kinds, and they must not be confused.
 
-**The site's own picture.** `public/photo.png` is kept only as the source of the generated
+**The site's own picture.** `assets/photo.png` is kept only as the source of the generated
 `src/app/icon.png`, `apple-icon.png`, `opengraph-image.png` and `twitter-image.png`. It is
-never rendered on a page, and no second one is ever added to `public/`.
+never rendered on a page and never served: `assets/` is a build-time source, outside
+`public/`, outside the image, and there is no second photograph anywhere.
 
 **Editorial images.** Anything inside a note, a book or a company: uploaded through the
 editor, and part of what is written. Paste one from the clipboard, drop it on the page, or
@@ -174,8 +175,13 @@ The files live in `UPLOADS_DIR` (`./uploads` in development, a Docker volume at
 `/app/uploads` in production) and are served by `/media/[name]`, cached forever because a
 name is only handed out once. They are deliberately **not** in `public/`: that directory is
 copied into the image at build time, so anything written there would be lost on the next
-deploy. Nothing is resized or re-encoded — the file is stored as it arrived, up to 8 MB, in
-one of png, jpeg, webp, gif or avif. The size the browser measured is baked into the name
+deploy. The server has no processing library and never will: the shrinking happens in the
+browser, before the upload, where there is a canvas and an encoder already. An image is
+drawn down to 1600 on its long edge and re-encoded as webp at 0.85; a GIF is left alone so
+its animation survives, an image already inside that and already webp or avif is left as it
+is, and a re-encode that came out no smaller loses to the original. What arrives is what is
+stored, up to 8 MB, in one of png, jpeg, webp, gif or avif. The size the browser measured is
+baked into the name
 (`stem-tag-1200x800.png`) so a page can reserve the box before the bytes arrive. An entry
 that stops referring to a file takes it with it, on save and on delete, unless another entry
 still refers to it.

@@ -26,7 +26,6 @@ export default function Prose({ blocks }: { blocks: Block[] }) {
           case "image":
             return (
               <figure key={i}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaUrl(block.src)}
                   alt={block.text}

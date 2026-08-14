@@ -5,6 +5,7 @@ import "./globals.css";
 import Masthead from "@/components/site/masthead";
 import Footer from "@/components/site/footer";
 import { site } from "@/content/site";
+import { alternatesFor } from "@/lib/meta";
 
 /** One family for the whole site: body, links, dates, headings, email.
  *  Literata carries an optical-size axis, so metadata at 14px and a title at
@@ -30,10 +31,7 @@ export const metadata: Metadata = {
     template: `%s · ${site.name}`,
   },
   description: site.description,
-  alternates: {
-    canonical: "/",
-    types: { "application/rss+xml": [{ url: "/feed.xml", title: site.name }] },
-  },
+  alternates: alternatesFor("/"),
   openGraph: {
     type: "profile",
     siteName: site.name,

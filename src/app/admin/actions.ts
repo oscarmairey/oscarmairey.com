@@ -76,17 +76,13 @@ export async function signIn(_state: LoginState, form: FormData): Promise<LoginS
  *  it on the next save. */
 export type SaveResult = { ok: true; id: number; date: string } | { ok: false; error: string };
 
-/** A server action is a public endpoint, so the section arrives as a string
- *  from the network and is checked here rather than trusted. */
-function asSection(value: string): Section | null {
-  return isSection(value) ? value : null;
-}
-
 export async function saveItem(draft: Draft): Promise<SaveResult> {
   await requireSession();
 
-  const section = asSection(draft.section);
-  if (!section) return { ok: false, error: "Unknown kind of entry." };
+  /* A server action is a public endpoint: the section arrives as a string from
+     the network and is checked here rather than trusted. */
+  const { section } = draft;
+  if (!isSection(section)) return { ok: false, error: "Unknown kind of entry." };
   const spec = sections[section];
 
   const title = draft.title.trim();
@@ -135,13 +131,12 @@ export async function setItemPublished(
 ): Promise<SaveResult> {
   await requireSession();
 
-  const target = asSection(section);
-  if (!target) return { ok: false, error: "Unknown kind of entry." };
+  if (!isSection(section)) return { ok: false, error: "Unknown kind of entry." };
 
   try {
     await store.setPublished(id, publish);
     /* Read back for the date: the first publish stamps a row that had none. */
-    const row = await store.getItem(sections[target].label, id);
+    const row = await store.getItem(sections[section].label, id);
     published();
     return { ok: true, id, date: row?.date ?? "" };
   } catch (error) {
@@ -152,13 +147,12 @@ export async function setItemPublished(
 export async function deleteItem(section: string, id: number) {
   await requireSession();
 
-  const target = asSection(section);
-  if (!target) return;
+  if (!isSection(section)) return;
 
-  const going = await store.getItem(sections[target].label, id);
-  await store.deleteItem(sections[target].label, id);
+  const going = await store.getItem(sections[section].label, id);
+  await store.deleteItem(sections[section].label, id);
   if (going) await sweep(going.body, "");
   published();
-  revalidatePath(`/admin/${target}`);
-  redirect(`/admin/${target}`);
+  revalidatePath(`/admin/${section}`);
+  redirect(`/admin/${section}`);
 }
