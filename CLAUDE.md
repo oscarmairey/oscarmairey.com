@@ -24,8 +24,8 @@ write. A second, slower audience comes back for the notes.
   "Index" label on the home page.
 - Text is written by Oscar. An unpublished note is out of the site entirely: listings,
   sitemap and feed.
-- Nobody types a slug or a reading time. Both are derived on save, from the title and from
-  the body. The slug follows the title while an entry is a draft and freezes when it is
+- Nobody types a slug, a reading time or an order. All three are derived: from the title,
+  from the body, and from when a thing was made. The slug follows the title while an entry is a draft and freezes when it is
   published: a published address never moves.
 - The author of a book is stored and edited, and never printed.
 
@@ -47,9 +47,13 @@ editor. Adding a fourth label is a row in `src/lib/labels.tsx` and three files.
 
 Everything the site lists lives in one Postgres table, `writings`, with a `label` column
 constrained to `note`, `book` or `company`. The columns are flat: `title`, `subtitle` (the
-one line the lists print), `byline` (a book's author, a company's role), `body`, `year`,
-`period`, `url`, `reading_time`, `published`, `published_at`, `sort_order`. Only a note is
-ever a draft; a book and a company are written published.
+one line the lists print), `byline` (a book's author, a company's role), `body`, `period`,
+`reading_time`, `published`, `published_at`, `created_at`. Only a note is ever a draft; a
+book and a company are written published. `year` and `url` are still in the table and are
+read by nothing: a book's year and a company's link left the site, and their data stayed.
+
+Nothing is ordered by hand. A list is newest first: a note by the day it was published,
+everything else by the day it was made.
 
 What differs between the three labels — the word the nav prints, the route, the metadata a
 list line carries, the metadata a page carries, the fields the editor shows — is in
@@ -72,9 +76,10 @@ or a selection on a touch screen, offers heading, quote, sidenote, emphasis and 
 inline tokens live, reads them back as source, and keeps the caret still by writing a
 region's content exactly once. The stored format never changes.
 
-What a reader never sees — a book's author, a company's period, a note's date, the order —
-is one quiet row under the page. Notes autosave as drafts; books and companies save on a
-press.
+Whatever the page prints is typed on the page, a company's period and role included: they
+are the stamp under its name, so that is where they are edited. What the page never prints
+gets one quiet row underneath, which is a note's date and a book's author and nothing else.
+A company has no row at all. Notes autosave as drafts; books and companies save on a press.
 
 ## Design system
 

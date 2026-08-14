@@ -85,8 +85,8 @@ than show a stale copy of a post about to be overwritten.
 
 ## The editor
 
-`/admin`, one password, session in a signed httpOnly cookie. Login is rate
-limited per client. Nothing under `/admin` is indexed: the pages are `noindex`,
+`/admin`, one password, session in a signed httpOnly cookie that expires on its
+own after thirty days; there is no sign-out. Login is rate limited per client. Nothing under `/admin` is indexed: the pages are `noindex`,
 `robots.txt` disallows it, and the sitemap lists public routes only.
 
 One list and one page serve all three labels: `/admin/notes`, `/admin/books`,
@@ -100,8 +100,9 @@ and a right click — or a selection, on a phone — offers heading, quote,
 sidenote, emphasis and link. No editor library: `src/app/admin/editable.tsx` is
 all of it.
 
-Slugs and reading times are never typed. Both are derived when you save; the
-slug follows the title until the entry is published and then stays put.
+Slugs and reading times are never typed, and neither is an order. The slug and
+the reading time are derived when you save — the slug follows the title until
+the entry is published and then stays put — and a list is simply newest first.
 
 Notes have a draft state and save themselves as you type; publishing is a
 deliberate press, and so is any edit to something already published. Books and
