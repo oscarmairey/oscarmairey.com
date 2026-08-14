@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { client, endSession, requireSession, startSession, verifyPassword } from "@/lib/auth";
-import { slugify } from "@/lib/blocks";
+import { readingTime, slugify } from "@/lib/blocks";
 import * as store from "@/lib/editor";
 import { isSection, sections, type Draft, type Section } from "@/lib/labels";
 import { clear, hit } from "@/lib/ratelimit";
@@ -70,38 +70,42 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
   const spec = sections[section];
 
   const title = draft.title.trim();
-  const slug = slugify(draft.slug.trim() || title);
-  if (!slug) {
-    return { ok: false, error: `Give it a ${spec.name.toLowerCase()}, or a slug, before saving.` };
-  }
-
-  const input: Draft = {
-    ...draft,
-    section,
-    slug,
-    title: title || "Untitled",
-    subtitle: draft.subtitle.trim(),
-    byline: draft.byline.trim(),
-    year: draft.year.trim(),
-    period: draft.period.trim(),
-    url: draft.url.trim(),
-    readingTime: draft.readingTime.trim(),
-    date: DATE.test(draft.date) ? draft.date : "",
-    sortOrder: Number.isFinite(draft.sortOrder) ? Math.trunc(draft.sortOrder) : 0,
-  };
 
   try {
-    let id = draft.id;
-    if (id === null) {
-      id = await store.createItem(input);
-    } else {
-      await store.updateItem(id, input);
-    }
+    /* The slug is never typed. It follows the title while the entry is still
+       only Oscar's, and freezes the moment a reader can reach it: a published
+       address is a promise, and a book or a company is published on sight. */
+    const current = draft.id === null ? undefined : await store.getItem(spec.label, draft.id);
+    if (draft.id !== null && !current) return { ok: false, error: "That entry is gone." };
+
+    const slug = current?.published
+      ? current.slug
+      : await store.freeSlug(spec.label, slugify(title) || current?.slug || spec.one, draft.id);
+
+    const input: Draft = {
+      ...draft,
+      section,
+      slug,
+      title: title || "Untitled",
+      subtitle: draft.subtitle.trim(),
+      byline: draft.byline.trim(),
+      year: draft.year.trim(),
+      period: draft.period.trim(),
+      url: draft.url.trim(),
+      /* Computed, not typed: it cannot disagree with what is written. */
+      readingTime: spec.label === "note" ? readingTime(draft.body) : "",
+      date: DATE.test(draft.date) ? draft.date : "",
+      sortOrder: Number.isFinite(draft.sortOrder) ? Math.trunc(draft.sortOrder) : 0,
+    };
+
+    const id = draft.id === null ? await store.createItem(input) : draft.id;
+    if (draft.id !== null) await store.updateItem(id, input);
+
     published();
     return { ok: true, id, slug };
   } catch (error) {
     if (store.isSlugTaken(error)) {
-      return { ok: false, error: `The slug “${slug}” already belongs to another ${spec.one}.` };
+      return { ok: false, error: `Two ${spec.plural.toLowerCase()} are fighting over one address.` };
     }
     return { ok: false, error: message(error) };
   }

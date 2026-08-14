@@ -123,6 +123,21 @@ export async function nextOrder(label: Label): Promise<number> {
   return row?.next ?? 0;
 }
 
+/** The first free slug in a label's namespace: the title's own, then the same
+ *  with -2, -3 after it. Slugs are never typed, so a collision has to resolve
+ *  itself rather than ask. */
+export async function freeSlug(label: Label, base: string, keep: number | null): Promise<string> {
+  const rows = await query<{ slug: string }>(
+    `SELECT slug FROM writings
+     WHERE label = $1 AND (slug = $2 OR slug LIKE $2 || '-%') AND ($3::int IS NULL OR id <> $3)`,
+    [label, base, keep],
+  );
+
+  const taken = new Set(rows.map((row) => row.slug));
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n += 1) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
+}
+
 /** Postgres' unique_violation, the only write error worth naming to the user. */
 export function isSlugTaken(error: unknown): boolean {
   return (error as { code?: string })?.code === "23505";

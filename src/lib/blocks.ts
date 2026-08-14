@@ -14,6 +14,8 @@
  *  by src/lib/inline.tsx. Parsing is total: every string is valid, and the worst
  *  case for an unrecognised line is that it renders as a paragraph. */
 
+import { plain } from "@/lib/inline";
+
 export type Block =
   | { kind: "p"; text: string }
   | { kind: "h2"; text: string }
@@ -78,6 +80,19 @@ export function serializeBlocks(blocks: Block[]): string {
       }
     })
     .join("\n\n");
+}
+
+/** Words per minute for a reader who is actually reading. The number is only
+ *  ever shown rounded to a minute, so it does not need to be defended. */
+const WPM = 200;
+
+/** The reading time the page prints, computed from the body at save time so it
+ *  can never disagree with what is written. Empty body, empty string. */
+export function readingTime(body: string): string {
+  const words = plain(body.replace(/^\s*(##|>|\[\^\d+\]:)\s*/gm, ""))
+    .split(/\s+/)
+    .filter(Boolean).length;
+  return words === 0 ? "" : `${Math.max(1, Math.round(words / WPM))} min`;
 }
 
 /** A slug from a title: what the editor proposes before Oscar overrides it.
