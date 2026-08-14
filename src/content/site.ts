@@ -10,7 +10,6 @@ export const site = {
   name: "Oscar Mairey",
   url: "https://oscarmairey.com",
   email: "o@mairey.net",
-  lastUpdated: "August 2026",
   description:
     "Oscar Mairey builds the technology infrastructure of ARTE One, an AI-native hedge fund based in Dubai. Previously at Chainraizer, Ta-da, and Le Crypto Daily.",
   ogDescription:

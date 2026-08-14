@@ -346,11 +346,8 @@
     }
   }
 
-  /* ---- footer, and the one photograph on the site ------------------ */
+  /* ---- footer ------------------------------------------------------ */
   .site-footer {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.25rem;
     margin-top: 2.75rem;
     padding: 1.7rem 0 4.5rem;
     border-top: 1px solid var(--rule);
@@ -375,12 +372,6 @@
   .site-footer .dot {
     color: var(--rule-firm);
     padding-inline: 0.3rem;
-  }
-  .portrait {
-    display: block;
-    flex: none;
-    width: 96px;
-    height: 96px;
   }
 }
 
