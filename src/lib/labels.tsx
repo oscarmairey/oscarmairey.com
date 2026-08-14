@@ -85,6 +85,10 @@ type Spec = {
   name: string;
   /** What the line under the title reads as when it is empty. */
   sub: string;
+  /** Where the one line goes in a list: under the title, or beside it. A
+   *  company's summary is short and belongs to its name; a note's angle and a
+   *  book's reason are sentences and get a line of their own. */
+  subBeside?: boolean;
   meta: (item: Item) => Meta;
   /** The line under the title, for a reader and for the editor at once: given
    *  an `edit`, the parts that are Oscar's to set come back editable. */
@@ -138,6 +142,7 @@ export const sections: Record<Section, Spec> = {
     route: "/companies",
     name: "Name",
     sub: "The one line the lists show.",
+    subBeside: true,
     meta: (item) => ({ text: item.period }),
     /* Both are printed under the name, so both are typed there. */
     stamp: (item, edit) =>

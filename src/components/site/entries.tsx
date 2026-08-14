@@ -27,9 +27,14 @@ export default function Entries({
         return (
           <li key={item.slug}>
             <p className="line">
-              <Link className="t" href={`${spec.route}/${item.slug}`}>
-                {item.title}
-              </Link>
+              <span>
+                <Link className="t" href={`${spec.route}/${item.slug}`}>
+                  {item.title}
+                </Link>
+                {spec.subBeside && item.subtitle && (
+                  <span className="note beside">{inline(item.subtitle)}</span>
+                )}
+              </span>
               {meta.text &&
                 (meta.dateTime ? (
                   <time className="when" dateTime={meta.dateTime}>
@@ -39,7 +44,9 @@ export default function Entries({
                   <span className="when">{meta.text}</span>
                 ))}
             </p>
-            {!tight && item.subtitle && <p className="note">{inline(item.subtitle)}</p>}
+            {!tight && !spec.subBeside && item.subtitle && (
+              <p className="note">{inline(item.subtitle)}</p>
+            )}
           </li>
         );
       })}

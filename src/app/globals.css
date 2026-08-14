@@ -242,6 +242,13 @@ a.t:focus-visible {
   line-height: 1.55;
   color: var(--ink-2);
 }
+/* Beside the name rather than under it: short enough to belong to it, quiet
+   enough not to be mistaken for it. Wraps under the name when the room runs
+   out, because .line wraps. */
+.note.beside {
+  margin-top: 0;
+  margin-left: 0.55rem;
+}
 
 /* ---- what came before this, and what came after ------------------ */
 /* Two more list rows, so they are dressed as list rows: the whole line reads
