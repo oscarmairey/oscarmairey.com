@@ -77,6 +77,9 @@ export default function Entry({
           <p className="line">
             {before && (
               <span>
+                <span className="dir" aria-hidden="true">
+                  ‹
+                </span>{" "}
                 Before:{" "}
                 <Link className="t" href={`${spec.route}/${before.slug}`}>
                   {before.title}
@@ -88,7 +91,10 @@ export default function Entry({
                 After:{" "}
                 <Link className="t" href={`${spec.route}/${after.slug}`}>
                   {after.title}
-                </Link>
+                </Link>{" "}
+                <span className="dir" aria-hidden="true">
+                  ›
+                </span>
               </span>
             )}
           </p>

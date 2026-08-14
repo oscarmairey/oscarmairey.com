@@ -295,6 +295,17 @@
   .ends .after:only-child {
     margin-left: auto;
   }
+  /* The way it points, in the size and weight the line is already in: a single
+     guillemet, which is punctuation Literata draws itself, not an arrow it
+     would have to borrow from the system. It belongs to the link beside it, so
+     it turns with it. */
+  .ends .dir {
+    transition: color 120ms var(--ease);
+  }
+  .ends span:has(a:hover) .dir,
+  .ends span:has(a:focus-visible) .dir {
+    color: var(--oxide);
+  }
 
   /* ---- prose ------------------------------------------------------- */
   .prose {
