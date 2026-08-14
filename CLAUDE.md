@@ -50,8 +50,8 @@ Everything the site lists lives in one Postgres table, `writings`, with a `label
 constrained to `note`, `book` or `company`. The columns are flat: `title`, `subtitle` (the
 one line the lists print), `byline` (a book's author, a company's role), `body`, `period`,
 `reading_time`, `published`, `published_at`, `created_at`. Everything starts as a draft,
-whatever its label, and is published by a press. `year` and `url` are still in the table and
-are read by nothing: a book's year and a company's link left the site, and their data stayed.
+whatever its label, and is published by a press. `url` is still in the table and is read by
+nothing: a company's link left the site and the one row that had one kept it.
 
 Nothing is ordered by hand. A list is newest first: a note by the day it was published,
 everything else by the day it was made.

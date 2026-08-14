@@ -13,8 +13,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return entryMetadata("books", await publishedOne("books", slug));
 }
 
-/** The title, the year it was read and the reason it stayed. The author is
- *  stored and stays out of the page, the same way it stays out of the list. */
+/** The title, the author under it, and the reason it stayed. */
 export default async function BookPage({ params }: Params) {
   const { slug } = await params;
   const book = await publishedOne("books", slug);
