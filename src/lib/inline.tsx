@@ -9,7 +9,9 @@ import type { ReactNode } from "react";
  *
  *  Anything else is rendered as text, so content can never inject markup. */
 
-const TOKEN = /\[\^(\d+)\]|\[([^\]]+)\]\(([^)]+)\)|\*([^*]+)\*/g;
+/** Exported so the editor can render the same tokens into a contenteditable
+ *  region and read them back out. One regex, one syntax, two renderers. */
+export const TOKEN = /\[\^(\d+)\]|\[([^\]]+)\]\(([^)]+)\)|\*([^*]+)\*/g;
 
 export function inline(text: string): ReactNode[] {
   const out: ReactNode[] = [];

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import Entries from "@/components/site/entries";
 import Prose from "@/components/site/prose";
@@ -21,15 +22,33 @@ export default function Entry({
   section,
   item,
   nearby = [],
+  slots,
 }: {
   section: Section;
   item: Item;
   nearby?: Item[];
+  /** The editor hands in the three text regions as editable ones, so the page
+   *  it edits and the page it publishes are the same file. */
+  slots?: { title: ReactNode; sub: ReactNode; body: ReactNode };
 }) {
   const spec = sections[section];
   const blocks = parseBody(item.body);
   const stamp = spec.stamp(item);
   const rest = nearby.slice(0, NEARBY);
+
+  /* Being edited: the line under the title is always there to be clicked, even
+     when it is empty, and the record's own metadata is edited under the page
+     rather than inside it. */
+  if (slots) {
+    return (
+      <article>
+        <h1 className="title">{slots.title}</h1>
+        <p className="sub">{slots.sub}</p>
+        {stamp && <p className="stamp">{stamp}</p>}
+        <div className="prose">{slots.body}</div>
+      </article>
+    );
+  }
 
   return (
     <>

@@ -60,11 +60,12 @@ export type Draft = {
   sortOrder: number;
 };
 
+/** A value that is not part of the page the reader sees, or is derived into the
+ *  stamp rather than typed into it. Everything else is edited in place. */
 export type Field = {
-  key: keyof Omit<Draft, "id" | "section" | "slug" | "title">;
+  key: keyof Omit<Draft, "id" | "section" | "slug" | "title" | "subtitle" | "body">;
   label: string;
-  placeholder?: string;
-  kind?: "date" | "number" | "area";
+  kind?: "date" | "number";
 };
 
 /** The metadata a list line carries, right of the title. A note's is a date, so
@@ -80,20 +81,19 @@ export type Spec = {
   one: string;
   /** The public route. The admin route is the same under /admin. */
   route: string;
-  /** What the first field is called. A company has a name, not a title. */
+  /** What the title reads as when it is empty. A company has a name. */
   name: string;
+  /** What the line under the title reads as when it is empty. */
+  sub: string;
   /** Only a note is ever a draft. */
   draftable: boolean;
   /** Books and companies are placed by hand. A note is placed by its date. */
   ordered: boolean;
-  /** The sentence under the editor's own title. */
-  hint: string;
   meta: (item: Item) => Meta;
   stamp: (item: Item) => ReactNode;
-  rows: Field[][];
+  /** The one row of metadata under the page in the editor. */
+  fields: Field[];
 };
-
-const BODY = "One blank line between paragraphs.";
 
 export const sections: Record<Section, Spec> = {
   notes: {
@@ -103,9 +103,9 @@ export const sections: Record<Section, Spec> = {
     one: "note",
     route: "/notes",
     name: "Title",
+    sub: "The one sentence that gives the angle.",
     draftable: true,
     ordered: false,
-    hint: "Only you can see this until you publish it. It saves itself as you type.",
     meta: (item) => ({ text: item.date ? formatMonth(item.date) : "", dateTime: item.date }),
     stamp: (item) => (
       <>
@@ -113,14 +113,7 @@ export const sections: Record<Section, Spec> = {
         {item.readingTime && ` · ${item.readingTime}`}
       </>
     ),
-    rows: [
-      [{ key: "subtitle", label: "Subtitle", placeholder: "The one sentence that gives the angle." }],
-      [
-        { key: "date", label: "Date", kind: "date" },
-        { key: "readingTime", label: "Reading time", placeholder: "9 min" },
-      ],
-      [{ key: "body", label: "Body", kind: "area", placeholder: BODY }],
-    ],
+    fields: [{ key: "date", label: "Date", kind: "date" }],
   },
 
   books: {
@@ -130,32 +123,15 @@ export const sections: Record<Section, Spec> = {
     one: "book",
     route: "/books",
     name: "Title",
+    sub: "Why it stayed. One personal sentence, never a summary of the book.",
     draftable: false,
     ordered: true,
-    hint: "This is live the moment you save it. The note is the line the lists show; the author is stored and never printed.",
     meta: (item) => ({ text: item.year }),
     stamp: (item) => item.year,
-    rows: [
-      [
-        {
-          key: "subtitle",
-          label: "Note",
-          placeholder: "One personal sentence, never a summary of the book.",
-        },
-      ],
-      [
-        { key: "byline", label: "Author" },
-        { key: "year", label: "Year read", placeholder: "2026" },
-      ],
-      [{ key: "sortOrder", label: "Order", kind: "number" }],
-      [
-        {
-          key: "body",
-          label: "Body",
-          kind: "area",
-          placeholder: `${BODY} Leave it empty and the page shows the note.`,
-        },
-      ],
+    fields: [
+      { key: "byline", label: "Author" },
+      { key: "year", label: "Year read" },
+      { key: "sortOrder", label: "Order", kind: "number" },
     ],
   },
 
@@ -166,29 +142,16 @@ export const sections: Record<Section, Spec> = {
     one: "company",
     route: "/companies",
     name: "Name",
+    sub: "The one line the lists show.",
     draftable: false,
     ordered: true,
-    hint: "This is live the moment you save it. The summary is the line the lists show; the body is the page itself.",
     meta: (item) => ({ text: item.period }),
     stamp: (item) => [item.period, item.byline].filter(Boolean).join(" · "),
-    rows: [
-      [
-        { key: "byline", label: "Role", placeholder: "What you did there" },
-        { key: "period", label: "Period", placeholder: "2024–2025, or Now" },
-      ],
-      [{ key: "subtitle", label: "Summary", placeholder: "The one line the lists show." }],
-      [
-        { key: "url", label: "Link", placeholder: "https://example.com" },
-        { key: "sortOrder", label: "Order", kind: "number" },
-      ],
-      [
-        {
-          key: "body",
-          label: "Body",
-          kind: "area",
-          placeholder: `${BODY} Leave it empty and the page shows the summary.`,
-        },
-      ],
+    fields: [
+      { key: "byline", label: "Role" },
+      { key: "period", label: "Period" },
+      { key: "url", label: "Link" },
+      { key: "sortOrder", label: "Order", kind: "number" },
     ],
   },
 };
