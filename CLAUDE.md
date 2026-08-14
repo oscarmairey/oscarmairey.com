@@ -27,7 +27,8 @@ write. A second, slower audience comes back for the notes.
 - Nobody types a slug, a reading time or an order. All three are derived: from the title,
   from the body, and from when a thing was made. The slug follows the title while an entry is a draft and freezes when it is
   published: a published address never moves.
-- The author of a book is stored and edited, and never printed.
+- The author of a book is stored, and edited under the title in the editor, and never
+  printed: not in a list, not on its page, nowhere a reader can reach.
 
 ## Architecture
 
@@ -55,6 +56,9 @@ read by nothing: a book's year and a company's link left the site, and their dat
 Nothing is ordered by hand. A list is newest first: a note by the day it was published,
 everything else by the day it was made.
 
+Two routes exist for uploaded images: `POST /admin/media` takes one in behind the editor's
+session, and `GET /media/[name]` serves it off disk. See Images below.
+
 What differs between the three labels — the word the nav prints, the route, the metadata a
 list line carries, the metadata a page carries, the fields the editor shows — is in
 `src/lib/labels.tsx` and nowhere else. `src/components/site/entries.tsx` is the only list on
@@ -76,10 +80,11 @@ or a selection on a touch screen, offers heading, quote, sidenote, emphasis and 
 inline tokens live, reads them back as source, and keeps the caret still by writing a
 region's content exactly once. The stored format never changes.
 
-Whatever the page prints is typed on the page, a company's period and role included: they
-are the stamp under its name, so that is where they are edited. What the page never prints
-gets one quiet row underneath, which is a note's date and a book's author and nothing else.
-A company has no row at all. Notes autosave as drafts; books and companies save on a press.
+Whatever the page prints is typed on the page. A company's period and role are the stamp
+under its name; a note's date is picked in the stamp where it is read. There is no metadata
+row anywhere, and no field that is not part of the page — with one exception: a book's
+author sits under its title **in the editor only**, because it is stored and never printed.
+Notes autosave as drafts; books and companies save on a press.
 
 ## Design system
 
@@ -148,13 +153,32 @@ regenerated from `public/photo.png`), JSON-LD `Person` with corrected `sameAs`, 
 `%s · Oscar Mairey`.
 
 Social links are `github.com/oscarmairey`, `x.com/oscarmairey`,
-`linkedin.com/in/oscar-mairey`. The old `cesarioo` handles were wrong and are gone.
+`linkedin.com/in/oscarmairey` — no hyphen in any of the three. The old `cesarioo` handles
+were wrong and are gone. All three open in a new tab; the email address does not.
 
 ## Images
 
-There are no photographs on the site. `public/photo.png` is kept only as the source of the
-generated `src/app/icon.png`, `apple-icon.png`, `opengraph-image.png` and
-`twitter-image.png`; it is never rendered on a page. Do not add images.
+Two kinds, and they must not be confused.
+
+**The site's own picture.** `public/photo.png` is kept only as the source of the generated
+`src/app/icon.png`, `apple-icon.png`, `opengraph-image.png` and `twitter-image.png`. It is
+never rendered on a page, and no second one is ever added to `public/`.
+
+**Editorial images.** Anything inside a note, a book or a company: uploaded through the
+editor, and part of what is written. Paste one from the clipboard, drop it on the page, or
+take Image from the right-click menu; it lands in the body as `![caption](name)`, which is
+what the block model stores. They sit in the measure with no radius, no border and no frame,
+and a caption, if there is one, reads at `--t-s` in `--ink-3`.
+
+The files live in `UPLOADS_DIR` (`./uploads` in development, a Docker volume at
+`/app/uploads` in production) and are served by `/media/[name]`, cached forever because a
+name is only handed out once. They are deliberately **not** in `public/`: that directory is
+copied into the image at build time, so anything written there would be lost on the next
+deploy. Nothing is resized or re-encoded — the file is stored as it arrived, up to 8 MB, in
+one of png, jpeg, webp, gif or avif. The size the browser measured is baked into the name
+(`stem-tag-1200x800.png`) so a page can reserve the box before the bytes arrive. An entry
+that stops referring to a file takes it with it, on save and on delete, unless another entry
+still refers to it.
 
 ## Stack
 

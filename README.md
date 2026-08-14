@@ -22,6 +22,7 @@ npm run db:migrate -- --status
 DATABASE_URL=postgresql://oscarmairey:…@127.0.0.1:5432/oscarmairey
 ADMIN_PASSWORD_HASH=scrypt:16384:8:1:…:…
 SESSION_SECRET=…                       # 32 characters or more
+UPLOADS_DIR=…                          # optional; ./uploads by default
 ```
 
 Generate the last two — and a password, if you want one invented for you:
@@ -74,6 +75,11 @@ Caddy terminates TLS and proxies to `127.0.0.1:3100`, which is the only port the
 container publishes. The build never opens a database connection, so no
 `DATABASE_URL` is needed to build the image — only to run it.
 
+Uploaded images live in the `uploads` volume, mounted at `/app/uploads`. It is
+outside the image on purpose: `public/` is copied in at build time, so anything
+written there would be thrown away by the next `docker compose build`. Back the
+volume up with the database, not with the repository.
+
 ## The site survives a dead database
 
 Public reads go through a 30-second in-memory cache. When Postgres is
@@ -99,6 +105,12 @@ Enter starts a paragraph, Backspace at the start of one joins it to the last,
 and a right click — or a selection, on a phone — offers heading, quote,
 sidenote, emphasis and link. No editor library: `src/app/admin/editable.tsx` is
 all of it.
+
+Images are pasted, dropped on the page, or picked from the right-click menu.
+They are stored as they arrive under `UPLOADS_DIR` — `./uploads` here, a Docker
+volume in production, never `public/`, which the build would overwrite — and
+served from `/media/<name>`. An entry that stops mentioning a file takes it with
+it.
 
 Slugs and reading times are never typed, and neither is an order. The slug and
 the reading time are derived when you save — the slug follows the title until
