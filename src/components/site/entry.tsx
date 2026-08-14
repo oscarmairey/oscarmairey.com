@@ -76,12 +76,18 @@ export default function Entry({
         <nav className="ends" aria-label={`Around this ${spec.one}`}>
           {before && (
             <p>
-              Before: <Link href={`${spec.route}/${before.slug}`}>{before.title}</Link>
+              <span className="when">Before:</span>
+              <Link className="t" href={`${spec.route}/${before.slug}`}>
+                {before.title}
+              </Link>
             </p>
           )}
           {after && (
             <p>
-              After: <Link href={`${spec.route}/${after.slug}`}>{after.title}</Link>
+              <span className="when">After:</span>
+              <Link className="t" href={`${spec.route}/${after.slug}`}>
+                {after.title}
+              </Link>
             </p>
           )}
         </nav>

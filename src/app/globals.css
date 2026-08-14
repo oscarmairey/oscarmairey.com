@@ -275,24 +275,19 @@
   }
 
   /* ---- what came before this, and what came after ------------------ */
+  /* Two more list rows, so they are dressed as list rows: the title wears .t
+     like every clickable title on the site, and the word in front of it wears
+     .when like every piece of metadata beside one. Nothing new is introduced
+     here at all: no rule above it, no size of its own, only the room it needs
+     to read as its own thing. */
   .ends {
     margin-top: 2.75rem;
-    padding-top: 1.7rem;
-    border-top: 1px solid var(--rule);
-    font-size: var(--t-s);
-    color: var(--ink-3);
   }
   .ends p + p {
-    margin-top: 0.35rem;
+    margin-top: 0.55rem;
   }
-  .ends a {
-    color: var(--ink-2);
-    text-decoration: none;
-    transition: color 120ms var(--ease);
-  }
-  .ends a:hover,
-  .ends a:focus-visible {
-    color: var(--oxide);
+  .ends .when {
+    margin-right: 0.45rem;
   }
 
   /* ---- prose ------------------------------------------------------- */
