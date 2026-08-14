@@ -32,16 +32,14 @@ export type Item = {
   subtitle: string;
   byline: string;
   body: string;
-  year: string;
   period: string;
-  url: string;
   readingTime: string;
   /** ISO day in UTC, "" when the row has never been dated. */
   date: string;
 };
 
-/** What the editor reads: an item, plus the two things only it cares about. */
-export type Row = Item & { published: boolean; sortOrder: number };
+/** What the editor reads: an item, plus the one thing only it cares about. */
+export type Row = Item & { published: boolean };
 
 /** What the editor writes. `id` is null until the first save. */
 export type Draft = {
@@ -52,12 +50,9 @@ export type Draft = {
   subtitle: string;
   byline: string;
   body: string;
-  year: string;
   period: string;
-  url: string;
   readingTime: string;
   date: string;
-  sortOrder: number;
 };
 
 /** A value that is not part of the page the reader sees, or is derived into the
@@ -65,7 +60,7 @@ export type Draft = {
 export type Field = {
   key: keyof Omit<Draft, "id" | "section" | "slug" | "title" | "subtitle" | "body">;
   label: string;
-  kind?: "date" | "number";
+  kind?: "date";
 };
 
 /** The metadata a list line carries, right of the title. A note's is a date, so
@@ -87,11 +82,12 @@ export type Spec = {
   sub: string;
   /** Only a note is ever a draft. */
   draftable: boolean;
-  /** Books and companies are placed by hand. A note is placed by its date. */
-  ordered: boolean;
   meta: (item: Item) => Meta;
   stamp: (item: Item) => ReactNode;
-  /** The one row of metadata under the page in the editor. */
+  /** Edited inside the stamp, where they are read, joined by a middle dot. */
+  stampFields: Field[];
+  /** Edited in the one quiet row under the page: never printed, or printed in
+   *  a shape nobody would want to type. */
   fields: Field[];
 };
 
@@ -105,7 +101,6 @@ export const sections: Record<Section, Spec> = {
     name: "Title",
     sub: "The one sentence that gives the angle.",
     draftable: true,
-    ordered: false,
     meta: (item) => ({ text: item.date ? formatMonth(item.date) : "", dateTime: item.date }),
     stamp: (item) => (
       <>
@@ -113,6 +108,7 @@ export const sections: Record<Section, Spec> = {
         {item.readingTime && ` · ${item.readingTime}`}
       </>
     ),
+    stampFields: [],
     fields: [{ key: "date", label: "Date", kind: "date" }],
   },
 
@@ -125,14 +121,11 @@ export const sections: Record<Section, Spec> = {
     name: "Title",
     sub: "Why it stayed. One personal sentence, never a summary of the book.",
     draftable: false,
-    ordered: true,
-    meta: (item) => ({ text: item.year }),
-    stamp: (item) => item.year,
-    fields: [
-      { key: "byline", label: "Author" },
-      { key: "year", label: "Year read" },
-      { key: "sortOrder", label: "Order", kind: "number" },
-    ],
+    /* A book is a title and a reason. Nothing else earned a place. */
+    meta: () => ({ text: "" }),
+    stamp: () => null,
+    stampFields: [],
+    fields: [{ key: "byline", label: "Author" }],
   },
 
   companies: {
@@ -144,15 +137,14 @@ export const sections: Record<Section, Spec> = {
     name: "Name",
     sub: "The one line the lists show.",
     draftable: false,
-    ordered: true,
     meta: (item) => ({ text: item.period }),
     stamp: (item) => [item.period, item.byline].filter(Boolean).join(" · "),
-    fields: [
-      { key: "byline", label: "Role" },
+    /* Both are printed under the name, so both are typed there. */
+    stampFields: [
       { key: "period", label: "Period" },
-      { key: "url", label: "Link" },
-      { key: "sortOrder", label: "Order", kind: "number" },
+      { key: "byline", label: "Role" },
     ],
+    fields: [],
   },
 };
 
@@ -162,7 +154,7 @@ export function isSection(value: string): value is Section {
   return value === "notes" || value === "books" || value === "companies";
 }
 
-export const emptyDraft = (section: Section, sortOrder = 0): Draft => ({
+export const emptyDraft = (section: Section): Draft => ({
   id: null,
   section,
   slug: "",
@@ -170,12 +162,9 @@ export const emptyDraft = (section: Section, sortOrder = 0): Draft => ({
   subtitle: "",
   byline: "",
   body: "",
-  year: "",
   period: "",
-  url: "",
   readingTime: "",
   date: "",
-  sortOrder,
 });
 
 export const draftOf = (section: Section, row: Row): Draft => ({
@@ -186,12 +175,9 @@ export const draftOf = (section: Section, row: Row): Draft => ({
   subtitle: row.subtitle,
   byline: row.byline,
   body: row.body,
-  year: row.year,
   period: row.period,
-  url: row.url,
   readingTime: row.readingTime,
   date: row.date,
-  sortOrder: row.sortOrder,
 });
 
 /** A draft is an item as far as the preview and the stamp are concerned. */

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { client, endSession, requireSession, startSession, verifyPassword } from "@/lib/auth";
+import { client, requireSession, startSession, verifyPassword } from "@/lib/auth";
 import { readingTime, slugify } from "@/lib/blocks";
 import * as store from "@/lib/editor";
 import { isSection, sections, type Draft, type Section } from "@/lib/labels";
@@ -47,11 +47,6 @@ export async function signIn(_state: LoginState, form: FormData): Promise<LoginS
   redirect("/admin");
 }
 
-export async function signOut() {
-  await endSession();
-  redirect("/admin/login");
-}
-
 /* ---- one editor, three labels ------------------------------------------- */
 
 export type SaveResult = { ok: true; id: number; slug: string } | { ok: false; error: string };
@@ -89,13 +84,10 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
       title: title || "Untitled",
       subtitle: draft.subtitle.trim(),
       byline: draft.byline.trim(),
-      year: draft.year.trim(),
       period: draft.period.trim(),
-      url: draft.url.trim(),
       /* Computed, not typed: it cannot disagree with what is written. */
       readingTime: spec.label === "note" ? readingTime(draft.body) : "",
       date: DATE.test(draft.date) ? draft.date : "",
-      sortOrder: Number.isFinite(draft.sortOrder) ? Math.trunc(draft.sortOrder) : 0,
     };
 
     const id = draft.id === null ? await store.createItem(input) : draft.id;

@@ -55,17 +55,15 @@ const COLUMNS = `
   subtitle,
   byline,
   body,
-  year,
   period,
-  url,
   reading_time AS "readingTime",
   to_char(COALESCE(published_at, created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
 `;
 
-/** Notes read newest first. Books and companies read in the order Oscar set,
- *  which is why the first company is the current one. */
+/** Newest first, everywhere. A note is dated by the day it was published and
+ *  everything else by the day it was made. Nothing is ordered by hand. */
 const orderFor = (label: Label) =>
-  label === "note" ? "COALESCE(published_at, created_at) DESC, id DESC" : "sort_order, created_at, id";
+  label === "note" ? "COALESCE(published_at, created_at) DESC, id DESC" : "created_at DESC, id DESC";
 
 /** Everything published under one label. Books and companies are written
  *  published, so this is the whole list for them and the live half for notes. */

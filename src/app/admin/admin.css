@@ -212,17 +212,6 @@
   margin-top: 2rem;
 }
 
-/* Sign out is a link that has to be a form, so it borrows .more from the
-   site and gives back the button chrome it never wanted. */
-.adm button.more {
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: var(--t-s);
-  color: var(--ink-3);
-  cursor: pointer;
-}
-
 /* ---- login ----------------------------------------------------------- */
 .adm-login {
   max-width: 22rem;

@@ -29,7 +29,7 @@ export default function Entry({
   nearby?: Item[];
   /** The editor hands in the three text regions as editable ones, so the page
    *  it edits and the page it publishes are the same file. */
-  slots?: { title: ReactNode; sub: ReactNode; body: ReactNode };
+  slots?: { title: ReactNode; sub: ReactNode; stamp?: ReactNode; body: ReactNode };
 }) {
   const spec = sections[section];
   const blocks = parseBody(item.body);
@@ -44,7 +44,7 @@ export default function Entry({
       <article>
         <h1 className="title">{slots.title}</h1>
         <p className="sub">{slots.sub}</p>
-        {stamp && <p className="stamp">{stamp}</p>}
+        {(slots.stamp || stamp) && <p className="stamp">{slots.stamp ?? stamp}</p>}
         <div className="prose">{slots.body}</div>
       </article>
     );
@@ -65,14 +65,6 @@ export default function Entry({
               <p>{inline(item.subtitle)}</p>
             </div>
           )
-        )}
-
-        {item.url && (
-          <p className="stamp">
-            <a href={item.url} rel="noopener noreferrer">
-              {item.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-            </a>
-          </p>
         )}
       </article>
 

@@ -18,17 +18,14 @@ const COLUMNS = `
   subtitle,
   byline,
   body,
-  year,
   period,
-  url,
   reading_time AS "readingTime",
   published,
-  COALESCE(to_char(published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '') AS date,
-  sort_order AS "sortOrder"
+  COALESCE(to_char(published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '') AS date
 `;
 
 const orderFor = (label: Label) =>
-  label === "note" ? "COALESCE(published_at, updated_at) DESC, id DESC" : "sort_order, created_at, id";
+  label === "note" ? "COALESCE(published_at, updated_at) DESC, id DESC" : "created_at DESC, id DESC";
 
 export function listItems(label: Label): Promise<Row[]> {
   return query<Row>(
@@ -41,16 +38,6 @@ export function getItem(label: Label, id: number): Promise<Row | undefined> {
   return queryOne<Row>(`SELECT ${COLUMNS} FROM writings WHERE label = $1 AND id = $2`, [label, id]);
 }
 
-export function counts(): Promise<{ label: Label; total: number; live: number }[]> {
-  return query<{ label: Label; total: number; live: number }>(`
-    SELECT label,
-           count(*)::int AS total,
-           count(*) FILTER (WHERE published)::int AS live
-    FROM writings
-    GROUP BY label
-  `);
-}
-
 const values = (draft: Draft) => [
   sections[draft.section].label,
   draft.slug,
@@ -58,12 +45,9 @@ const values = (draft: Draft) => [
   draft.subtitle,
   draft.byline,
   draft.body,
-  draft.year,
   draft.period,
-  draft.url,
   draft.readingTime,
   draft.date,
-  draft.sortOrder,
 ];
 
 /** A label that has no draft state is written published: a book or a company is
@@ -71,9 +55,8 @@ const values = (draft: Draft) => [
 export async function createItem(draft: Draft): Promise<number> {
   const row = await queryOne<{ id: number }>(
     `INSERT INTO writings
-       (label, slug, title, subtitle, byline, body, year, period, url, reading_time,
-        published_at, sort_order, published)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11, '')::timestamptz, $12, $1 <> 'note')
+       (label, slug, title, subtitle, byline, body, period, reading_time, published_at, published)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::timestamptz, $1 <> 'note')
      RETURNING id::int AS id`,
     values(draft),
   );
@@ -85,10 +68,9 @@ export async function updateItem(id: number, draft: Draft): Promise<void> {
   const [label, ...rest] = values(draft);
   await query(
     `UPDATE writings
-     SET slug = $1, title = $2, subtitle = $3, byline = $4, body = $5, year = $6,
-         period = $7, url = $8, reading_time = $9,
-         published_at = NULLIF($10, '')::timestamptz, sort_order = $11, updated_at = now()
-     WHERE id = $12 AND label = $13`,
+     SET slug = $1, title = $2, subtitle = $3, byline = $4, body = $5, period = $6,
+         reading_time = $7, published_at = NULLIF($8, '')::timestamptz, updated_at = now()
+     WHERE id = $9 AND label = $10`,
     [...rest, id, label],
   );
   invalidateContent();
@@ -111,16 +93,6 @@ export async function setPublished(id: number, published: boolean): Promise<void
 export async function deleteItem(label: Label, id: number): Promise<void> {
   await query("DELETE FROM writings WHERE label = $1 AND id = $2", [label, id]);
   invalidateContent();
-}
-
-/** The next place in an ordered list, so a new row lands at the end rather than
- *  silently tying with the first. */
-export async function nextOrder(label: Label): Promise<number> {
-  const row = await queryOne<{ next: number }>(
-    "SELECT COALESCE(MAX(sort_order) + 1, 0)::int AS next FROM writings WHERE label = $1",
-    [label],
-  );
-  return row?.next ?? 0;
 }
 
 /** The first free slug in a label's namespace: the title's own, then the same

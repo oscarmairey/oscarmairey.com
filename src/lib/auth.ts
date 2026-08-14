@@ -88,7 +88,10 @@ function valid(token: string): boolean {
 }
 
 /** Secure is set whenever the request arrived over TLS, which behind Caddy it
- *  always does in production. Plain http on localhost stays testable. */
+ *  always does in production. Plain http on localhost stays testable.
+ *
+ *  There is no way to sign out, because there was never a reason to: the
+ *  session is one person's, on one machine, and it expires by itself. */
 async function overTls(): Promise<boolean> {
   const proto = (await headers()).get("x-forwarded-proto");
   if (proto) return proto.split(",")[0].trim() === "https";
@@ -103,10 +106,6 @@ export async function startSession() {
     path: "/",
     maxAge: MAX_AGE,
   });
-}
-
-export async function endSession() {
-  (await cookies()).delete(COOKIE);
 }
 
 export async function signedIn(): Promise<boolean> {

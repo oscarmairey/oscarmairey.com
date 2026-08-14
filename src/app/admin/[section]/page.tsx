@@ -39,9 +39,7 @@ export default async function SectionList({ params }: Params) {
                   <Link className="t" href={`/admin/${section}/${row.id}`}>
                     {row.title || "Untitled"}
                   </Link>
-                  <span className="when">
-                    {draft ? "Draft" : spec.meta(row).text || `#${row.sortOrder}`}
-                  </span>
+                  <span className="when">{draft ? "Draft" : spec.meta(row).text}</span>
                 </p>
                 {row.subtitle && <p className="note">{row.subtitle}</p>}
               </li>

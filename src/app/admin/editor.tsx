@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Entry from "@/components/site/entry";
@@ -82,11 +82,8 @@ export default function Editor({ initial, live }: Props) {
     sending.subtitle,
     sending.body,
     sending.byline,
-    sending.year,
     sending.period,
-    sending.url,
     sending.date,
-    sending.sortOrder,
   ]);
 
   const savedRef = useRef(snapshot);
@@ -490,6 +487,30 @@ export default function Editor({ initial, live }: Props) {
   /* A heading, a quote and a sidenote are what a block is; emphasis and a link
      are what a run of text is. So the first three are offered on a block's own
      text and the last two anywhere. */
+  /* Whatever a label prints under the title is typed under the title. For a
+     company that is the period and the role; for a note it is a date and a word
+     count, neither of which anyone would want to type. */
+  const stampSlot =
+    spec.stampFields.length === 0 ? undefined : (
+      <>
+        {spec.stampFields.map((field, i) => (
+          <Fragment key={field.key}>
+            {i > 0 && " · "}
+            <Region
+              as="span"
+              plain
+              source={draft[field.key]}
+              region={field.key}
+              placeholder={field.label}
+              caret={at(field.key)}
+              onChange={(value) => set({ [field.key]: value } as Partial<Draft>)}
+              onKeyDown={(event) => event.key === "Enter" && event.preventDefault()}
+            />
+          </Fragment>
+        ))}
+      </>
+    );
+
   const current = menu?.part === "text" ? rows[menu.row]?.block.kind : undefined;
   const hasNote = menu ? noteAfter(rows, menu.row) !== -1 : false;
 
@@ -531,6 +552,7 @@ export default function Editor({ initial, live }: Props) {
                 onKeyDown={(event) => event.key === "Enter" && event.preventDefault()}
               />
             ),
+            stamp: stampSlot,
             body: blocks,
           }}
         />
@@ -582,24 +604,20 @@ export default function Editor({ initial, live }: Props) {
         </div>
       )}
 
-      <div className="adm-meta">
-        {spec.fields.map((field) => (
-          <label key={field.key}>
-            <span>{field.label}</span>
-            <input
-              type={field.kind === "date" ? "date" : field.kind === "number" ? "number" : "text"}
-              value={String(draft[field.key])}
-              inputMode={field.kind === "number" ? "numeric" : undefined}
-              onChange={(event) =>
-                set({
-                  [field.key]:
-                    field.kind === "number" ? Number(event.target.value) : event.target.value,
-                } as Partial<Draft>)
-              }
-            />
-          </label>
-        ))}
-      </div>
+      {spec.fields.length > 0 && (
+        <div className="adm-meta">
+          {spec.fields.map((field) => (
+            <label key={field.key}>
+              <span>{field.label}</span>
+              <input
+                type={field.kind === "date" ? "date" : "text"}
+                value={draft[field.key]}
+                onChange={(event) => set({ [field.key]: event.target.value } as Partial<Draft>)}
+              />
+            </label>
+          ))}
+        </div>
+      )}
 
       <div className="adm-actions">
         <p className={error ? "adm-status bad" : "adm-status"} role="status">
