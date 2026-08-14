@@ -24,7 +24,7 @@ export const site = {
   links: [
     { label: "GitHub", href: "https://github.com/oscarmairey" },
     { label: "X", href: "https://x.com/oscarmairey" },
-    { label: "LinkedIn", href: "https://www.linkedin.com/in/oscar-mairey/" },
+    { label: "LinkedIn", href: "https://www.linkedin.com/in/oscarmairey/" },
   ],
 } as const;
 

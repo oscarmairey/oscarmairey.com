@@ -51,6 +51,9 @@ export default async function SectionList({ params }: Params) {
           <Link className="adm-btn primary" href={`/admin/${section}/new`}>
             New {spec.one}
           </Link>
+          <Link className="more" href="/admin">
+            Return
+          </Link>
         </div>
       </section>
     </>
