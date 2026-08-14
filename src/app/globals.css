@@ -1,6 +1,9 @@
+/* Preflight only. The components and utilities directives are deliberately not
+   here: nothing in this file is a utility class, and a scan that decides which
+   of these rules ship is a scan that can be wrong. It was: `.ref`, the sidenote
+   marker, is written by src/lib/inline.tsx, which no content glob covers, and
+   it survived only because the editor happens to contain the same string. */
 @tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* =====================================================================
    oscarmairey.com — editorial oxide red, light only.
@@ -75,345 +78,343 @@
   }
 }
 
-@layer components {
-  /* ---- shell ------------------------------------------------------ */
-  .wrap {
-    max-width: var(--page);
-    margin-inline: auto;
-    padding-inline: 1.5rem;
-  }
+/* ---- shell ------------------------------------------------------ */
+.wrap {
+  max-width: var(--page);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
 
-  .skip {
-    position: absolute;
-    left: -9999px;
-    background: var(--paper);
-    padding: 0.6rem 0.9rem;
-  }
-  .skip:focus {
-    left: 1rem;
-    top: 1rem;
-    z-index: 20;
-  }
+.skip {
+  position: absolute;
+  left: -9999px;
+  background: var(--paper);
+  padding: 0.6rem 0.9rem;
+}
+.skip:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 20;
+}
 
-  /* An index page names itself twice: once in the masthead nav, in oxide, and
-     once in a title nobody needed. The title stays in the document — one h1
-     per page, for the outline, for screen readers and for search — and is
-     simply not drawn. */
-  .vh {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
-  }
+/* An index page names itself twice: once in the masthead nav, in oxide, and
+   once in a title nobody needed. The title stays in the document — one h1
+   per page, for the outline, for screen readers and for search — and is
+   simply not drawn. */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
-  .mast {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.4rem 2rem;
-    padding: 3.25rem 0 0.9rem;
-    border-bottom: 1px solid var(--rule);
-  }
-  /* One wordmark, cut the same way on every route. The home page prints it as
-     the page's h1 and the other pages as a link back, so both must resolve to
-     the same size and weight: Literata's optical-size axis turns any size gap
-     into a different letterform, which reads as a different font. */
-  .mast-name,
-  h1.mast-name {
-    font-family: inherit;
-    font-size: var(--t-l);
-    font-weight: 600;
-    letter-spacing: -0.014em;
-    line-height: 1.2;
-    text-decoration: none;
-    transition: color 120ms var(--ease);
-  }
-  a.mast-name:hover {
-    color: var(--oxide);
-  }
-  .mast nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 1.5rem;
-  }
-  /* Every section link is the same type. Only the colour carries the state. */
-  .mast nav a {
-    font-family: inherit;
-    font-size: var(--t-m);
-    font-style: normal;
-    font-weight: 400;
-    letter-spacing: 0;
-    color: var(--ink-2);
-    text-decoration: none;
-    transition: color 120ms var(--ease);
-  }
-  .mast nav a:hover,
-  .mast nav a[aria-current="page"] {
-    color: var(--oxide);
-  }
+.mast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 2rem;
+  padding: 3.25rem 0 0.9rem;
+  border-bottom: 1px solid var(--rule);
+}
+/* One wordmark, cut the same way on every route. The home page prints it as
+   the page's h1 and the other pages as a link back, so both must resolve to
+   the same size and weight: Literata's optical-size axis turns any size gap
+   into a different letterform, which reads as a different font. */
+.mast-name,
+h1.mast-name {
+  font-family: inherit;
+  font-size: var(--t-l);
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color 120ms var(--ease);
+}
+a.mast-name:hover {
+  color: var(--oxide);
+}
+.mast nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+/* Every section link is the same type. Only the colour carries the state. */
+.mast nav a {
+  font-family: inherit;
+  font-size: var(--t-m);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 120ms var(--ease);
+}
+.mast nav a:hover,
+.mast nav a[aria-current="page"] {
+  color: var(--oxide);
+}
 
-  /* ---- page opening ----------------------------------------------- */
-  .lede {
-    margin-top: 2rem;
-  }
-  .lede p + p {
-    margin-top: 1.15em;
-  }
-  .title {
-    margin-top: 2.4rem;
-    font-size: var(--t-xl);
-    font-weight: 600;
-    line-height: 1.18;
-    letter-spacing: -0.014em;
-  }
-  .sub {
-    margin-top: 0.7rem;
-    color: var(--ink-2);
-  }
-  .stamp {
-    margin-top: 0.7rem;
-    font-size: var(--t-s);
-    color: var(--ink-3);
-  }
+/* ---- page opening ----------------------------------------------- */
+.lede {
+  margin-top: 2rem;
+}
+.lede p + p {
+  margin-top: 1.15em;
+}
+.title {
+  margin-top: 2.4rem;
+  font-size: var(--t-xl);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.014em;
+}
+.sub {
+  margin-top: 0.7rem;
+  color: var(--ink-2);
+}
+.stamp {
+  margin-top: 0.7rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
 
-  /* ---- sections ---------------------------------------------------- */
-  .section {
-    margin-top: 2.75rem;
-    padding-top: 1.7rem;
-    border-top: 1px solid var(--rule);
-  }
-  /* Whatever section follows a hidden title opens straight under the masthead,
-     whose own hairline already closes the header; a second rule would draw
-     itself across an empty band. The hidden h1 keeps its place in the DOM, so
-     the adjacent selector finds the first section that actually rendered. */
-  .vh + .section {
-    margin-top: 2.2rem;
-    padding-top: 0;
-    border-top: 0;
-  }
-  .section h2 {
-    font-size: var(--t-l);
-    font-weight: 500;
-    line-height: 1.25;
-  }
-  /* ---- entry lists ------------------------------------------------- */
-  .rows {
-    margin-top: 1.4rem;
-    list-style: none;
-    padding: 0;
-  }
-  .rows > li + li {
-    margin-top: 1.15rem;
-  }
-  .rows.tight > li + li {
-    margin-top: 0.55rem;
-  }
-  .line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0 1.5rem;
-  }
-  .t {
-    font-weight: 500;
-    text-decoration: underline;
-    text-decoration-color: transparent;
-    text-underline-offset: 0.16em;
-    text-decoration-thickness: 0.055em;
-    transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
-  }
-  a.t:hover,
-  a.t:focus-visible {
-    color: var(--oxide);
-    text-decoration-color: var(--oxide);
-  }
-  .when {
-    font-size: var(--t-s);
-    color: var(--ink-3);
-    white-space: nowrap;
-  }
-  .note {
-    margin-top: 0.15rem;
-    font-size: var(--t-s);
-    line-height: 1.55;
-    color: var(--ink-2);
-  }
-  .more {
-    display: inline-block;
-    margin-top: 1.5rem;
-    font-size: var(--t-s);
-    color: var(--ink-3);
-    text-decoration: underline;
-    text-decoration-color: var(--rule-firm);
-    text-underline-offset: 0.16em;
-    transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
-  }
-  .more:hover {
-    color: var(--oxide);
-    text-decoration-color: var(--oxide);
-  }
+/* ---- sections ---------------------------------------------------- */
+.section {
+  margin-top: 2.75rem;
+  padding-top: 1.7rem;
+  border-top: 1px solid var(--rule);
+}
+/* Whatever section follows a hidden title opens straight under the masthead,
+   whose own hairline already closes the header; a second rule would draw
+   itself across an empty band. The hidden h1 keeps its place in the DOM, so
+   the adjacent selector finds the first section that actually rendered. */
+.vh + .section {
+  margin-top: 2.2rem;
+  padding-top: 0;
+  border-top: 0;
+}
+.section h2 {
+  font-size: var(--t-l);
+  font-weight: 500;
+  line-height: 1.25;
+}
+/* ---- entry lists ------------------------------------------------- */
+.rows {
+  margin-top: 1.4rem;
+  list-style: none;
+  padding: 0;
+}
+.rows > li + li {
+  margin-top: 1.15rem;
+}
+.rows.tight > li + li {
+  margin-top: 0.55rem;
+}
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 1.5rem;
+}
+.t {
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 0.055em;
+  transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
+}
+a.t:hover,
+a.t:focus-visible {
+  color: var(--oxide);
+  text-decoration-color: var(--oxide);
+}
+.when {
+  font-size: var(--t-s);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.note {
+  margin-top: 0.15rem;
+  font-size: var(--t-s);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.more {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-firm);
+  text-underline-offset: 0.16em;
+  transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
+}
+.more:hover {
+  color: var(--oxide);
+  text-decoration-color: var(--oxide);
+}
 
-  /* ---- what came before this, and what came after ------------------ */
-  /* Two more list rows, so they are dressed as list rows: the whole line reads
-     in one voice, the one a list title reads in, and the title inside it wears
-     .t like every clickable title on the site. The word in front is not
-     metadata about the link, it is the beginning of the sentence the link
-     finishes, so it is the same size and the same weight. Only the link is a
-     link, and only it goes to oxide under the cursor. */
-  .ends {
-    margin-top: 2.75rem;
-    font-weight: 500;
-  }
-  /* One row, kept apart by .line, the same way a section title and its link
-     are. Too narrow to hold both and they wrap, and a wrapped row starts on
-     the left like everything else. An After with nothing before it still ends
-     the row, because that is where it belongs in time. */
-  .ends .line {
-    row-gap: 0.35rem;
-  }
-  .ends .after:only-child {
-    margin-left: auto;
-  }
-  /* A whole side is one link — the guillemet that points the way, the word that
-     says which way, and the name it leads to — so the whole side turns. The
-     underline stays under the name: dragged beneath the label and the
-     punctuation as well, a hint becomes a rule. */
-  .ends a {
-    text-decoration: none;
-    transition: color 120ms var(--ease);
-  }
-  .ends a:hover,
-  .ends a:focus-visible {
-    color: var(--oxide);
-  }
-  .ends a:hover .t,
-  .ends a:focus-visible .t {
-    text-decoration-color: var(--oxide);
-  }
+/* ---- what came before this, and what came after ------------------ */
+/* Two more list rows, so they are dressed as list rows: the whole line reads
+   in one voice, the one a list title reads in, and the title inside it wears
+   .t like every clickable title on the site. The word in front is not
+   metadata about the link, it is the beginning of the sentence the link
+   finishes, so it is the same size and the same weight. Only the link is a
+   link, and only it goes to oxide under the cursor. */
+.ends {
+  margin-top: 2.75rem;
+  font-weight: 500;
+}
+/* One row, kept apart by .line, the same way a section title and its link
+   are. Too narrow to hold both and they wrap, and a wrapped row starts on
+   the left like everything else. An After with nothing before it still ends
+   the row, because that is where it belongs in time. */
+.ends .line {
+  row-gap: 0.35rem;
+}
+.ends .after:only-child {
+  margin-left: auto;
+}
+/* A whole side is one link — the guillemet that points the way, the word that
+   says which way, and the name it leads to — so the whole side turns. The
+   underline stays under the name: dragged beneath the label and the
+   punctuation as well, a hint becomes a rule. */
+.ends a {
+  text-decoration: none;
+  transition: color 120ms var(--ease);
+}
+.ends a:hover,
+.ends a:focus-visible {
+  color: var(--oxide);
+}
+.ends a:hover .t,
+.ends a:focus-visible .t {
+  text-decoration-color: var(--oxide);
+}
 
-  /* ---- prose ------------------------------------------------------- */
-  .prose {
-    margin-top: 2.2rem;
-  }
-  .section > .prose {
-    margin-top: 1.1rem;
-  }
-  .prose p {
-    margin-top: 1.15em;
-  }
-  .prose > :first-child {
-    margin-top: 0;
-  }
-  .prose h2 {
-    margin: 2.4rem 0 0.15rem;
-    font-size: var(--t-l);
-    font-weight: 500;
-    line-height: 1.25;
-  }
-  .prose blockquote {
-    margin: 1.8rem 0 1.8rem 1.8rem;
-    color: var(--ink-2);
-  }
-  .prose blockquote p {
-    margin-top: 0;
-  }
-  .prose .src {
-    margin-top: 0.5rem;
-    font-size: var(--t-s);
-    color: var(--ink-3);
-  }
-  .prose a,
-  .note a {
-    color: var(--oxide);
-    text-decoration: underline;
-    text-decoration-color: var(--rule-firm);
-    text-underline-offset: 0.16em;
-    text-decoration-thickness: 0.055em;
-    transition: text-decoration-color 120ms var(--ease);
-  }
-  .prose a:hover,
-  .note a:hover {
-    text-decoration-color: var(--oxide);
-  }
+/* ---- prose ------------------------------------------------------- */
+.prose {
+  margin-top: 2.2rem;
+}
+.section > .prose {
+  margin-top: 1.1rem;
+}
+.prose p {
+  margin-top: 1.15em;
+}
+.prose > :first-child {
+  margin-top: 0;
+}
+.prose h2 {
+  margin: 2.4rem 0 0.15rem;
+  font-size: var(--t-l);
+  font-weight: 500;
+  line-height: 1.25;
+}
+.prose blockquote {
+  margin: 1.8rem 0 1.8rem 1.8rem;
+  color: var(--ink-2);
+}
+.prose blockquote p {
+  margin-top: 0;
+}
+.prose .src {
+  margin-top: 0.5rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+.prose a,
+.note a {
+  color: var(--oxide);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-firm);
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 0.055em;
+  transition: text-decoration-color 120ms var(--ease);
+}
+.prose a:hover,
+.note a:hover {
+  text-decoration-color: var(--oxide);
+}
 
-  /* An uploaded image sits in the measure and nowhere else: no radius, no
-     border, no frame. The caption is the same size and colour as a sidenote. */
-  .prose figure {
-    margin: 2.2rem 0;
-  }
-  .prose img {
-    display: block;
-    max-width: 100%;
-    height: auto;
-  }
-  .prose figcaption {
-    margin-top: 0.5rem;
-    font-size: var(--t-s);
-    line-height: 1.55;
-    color: var(--ink-3);
-  }
+/* An uploaded image sits in the measure and nowhere else: no radius, no
+   border, no frame. The caption is the same size and colour as a sidenote. */
+.prose figure {
+  margin: 2.2rem 0;
+}
+.prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.prose figcaption {
+  margin-top: 0.5rem;
+  font-size: var(--t-s);
+  line-height: 1.55;
+  color: var(--ink-3);
+}
 
-  /* sidenotes: inline by default, in the margin when there is room */
-  .ref {
-    font-size: 0.68em;
-    vertical-align: super;
-    line-height: 0;
-    color: var(--oxide);
-  }
+/* sidenotes: inline by default, in the margin when there is room */
+.ref {
+  font-size: 0.68em;
+  vertical-align: super;
+  line-height: 0;
+  color: var(--oxide);
+}
+.sn {
+  display: block;
+  margin: 0.9rem 0 0.9rem 1.8rem;
+  font-size: var(--t-s);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.sn .n {
+  margin-right: 0.35rem;
+  color: var(--ink-3);
+}
+@media (min-width: 1240px) {
   .sn {
-    display: block;
-    margin: 0.9rem 0 0.9rem 1.8rem;
-    font-size: var(--t-s);
-    line-height: 1.55;
-    color: var(--ink-2);
+    float: right;
+    clear: right;
+    width: 11rem;
+    margin: 0.3rem -13.5rem 0.8rem 0;
   }
-  .sn .n {
-    margin-right: 0.35rem;
-    color: var(--ink-3);
-  }
-  @media (min-width: 1240px) {
-    .sn {
-      float: right;
-      clear: right;
-      width: 11rem;
-      margin: 0.3rem -13.5rem 0.8rem 0;
-    }
-  }
+}
 
-  /* ---- footer ------------------------------------------------------ */
-  .site-footer {
-    margin-top: 2.75rem;
-    padding: 1.7rem 0 4.5rem;
-    border-top: 1px solid var(--rule);
-  }
-  .site-footer p {
-    font-size: var(--t-s);
-    color: var(--ink-3);
-  }
-  .site-footer p + p {
-    margin-top: 0.35rem;
-  }
-  .site-footer a {
-    text-decoration: none;
-    transition: color 120ms var(--ease);
-  }
-  .site-footer a:hover {
-    color: var(--oxide);
-  }
-  .site-footer .mail {
-    color: var(--oxide);
-  }
-  .site-footer .dot {
-    color: var(--rule-firm);
-    padding-inline: 0.3rem;
-  }
+/* ---- footer ------------------------------------------------------ */
+.site-footer {
+  margin-top: 2.75rem;
+  padding: 1.7rem 0 4.5rem;
+  border-top: 1px solid var(--rule);
+}
+.site-footer p {
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+.site-footer p + p {
+  margin-top: 0.35rem;
+}
+.site-footer a {
+  text-decoration: none;
+  transition: color 120ms var(--ease);
+}
+.site-footer a:hover {
+  color: var(--oxide);
+}
+.site-footer .mail {
+  color: var(--oxide);
+}
+.site-footer .dot {
+  color: var(--rule-firm);
+  padding-inline: 0.3rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
