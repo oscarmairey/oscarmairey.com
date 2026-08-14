@@ -3,9 +3,9 @@
 Next.js (App Router) on the front, Postgres behind it, one password in front of
 an editor at `/admin`.
 
-Writings, books and companies live in the database and are edited from the
-browser. What is left in `src/content` — the bio, the code list, the talks —
-still changes with a deploy.
+Notes, books and companies are one table with three labels, edited from the
+browser. What is left in `src/content` — the bio, the links — still changes with
+a deploy.
 
 ## Local
 
@@ -89,12 +89,17 @@ than show a stale copy of a post about to be overwritten.
 limited per client. Nothing under `/admin` is indexed: the pages are `noindex`,
 `robots.txt` disallows it, and the sitemap lists public routes only.
 
-Writings have a draft state and save themselves as you type; publishing is a
+One list view and one form serve all three labels: `/admin/notes`,
+`/admin/books`, `/admin/companies`, then `new` or the row's id under each. What
+a label does differently — its fields, its words, its route — is in
+`src/lib/labels.tsx`.
+
+Notes have a draft state and save themselves as you type; publishing is a
 deliberate press, and so is any edit to something already published. Books and
 companies are always live, so they save on a press. The Preview tab mounts the
-same renderer the public page mounts, so it cannot drift from what ships.
+same page component the public route mounts, so it cannot drift from what ships.
 
-Body text uses a small format, the same one for writings and companies:
+Body text uses the same small format under every label:
 
 ```
 ## heading

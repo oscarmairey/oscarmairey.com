@@ -7,7 +7,7 @@ Content-first. The design gets out of the way and stays out of it.
 
 Investors, operators and qualified strangers running passive due diligence after a search,
 an intro email or a LinkedIn profile. They read for ninety seconds and decide whether to
-write. A second, slower audience comes back for the writings.
+write. A second, slower audience comes back for the notes.
 
 ## Editorial rules (non-negotiable)
 
@@ -15,28 +15,51 @@ write. A second, slower audience comes back for the writings.
   reader does the arithmetic and their conclusion is worth more than ours.
 - A claim is dated, numbered, named, or it does not exist.
 - The company is **Ko Social Network**, never "KOKO".
-- ARTE One appears in `currently` and nowhere else. No positions, counterparties or capital.
+- ARTE One is the first company in the record and is described only there and on its own
+  page. No positions, counterparties or capital.
 - English only. No em dashes anywhere in copy.
-- No contact section: the footer carries three links and an address, and that is all.
+- No contact section: the footer carries three links and an address, and that is all. No
+  photograph, no "last updated" line, nothing that has to be kept true by hand.
 - No decorative metadata. No "Founder / Dubai / Building since 2021" tag line, ever. No
   "Index" label on the home page.
-- Text is written by Oscar. `draft: true` keeps an unwritten piece out of the site
-  entirely: listings, sitemap and feed.
+- Text is written by Oscar. An unpublished note is out of the site entirely: listings,
+  sitemap and feed.
+- The author of a book is stored and edited, and never printed.
 
 ## Architecture
 
+Three lists, one shape. A note, a book and a company are the same kind of thing with
+different metadata, so they are one table, one list component, one page component and one
+editor. Adding a fourth label is a row in `src/lib/labels.tsx` and three files.
+
 | Route | Content |
 |---|---|
-| `/` | Bio, five latest writings, books, condensed building record, footer |
-| `/writings` | Every published writing |
-| `/writings/[slug]` | One writing, with sidenotes |
+| `/` | Bio, then the five newest of each list, titles and metadata only |
+| `/notes` | Every published note |
+| `/notes/[slug]` | One note, with sidenotes |
 | `/books` | Books finished, with the reason each one stayed |
-| `/building` | Currently (dated), then the record, then code, then talks |
+| `/books/[slug]` | One book |
+| `/companies` | The record, current company first |
+| `/companies/[slug]` | One company |
 
-Content lives in `src/content/*.ts` as plain data, so a web editor can round-trip it later
-without a parser. Writing bodies use a small block model (`p`, `h2`, `quote`, `note`) with a
-tiny inline formatter in `src/lib/inline.tsx` supporting `[label](url)`, `*emphasis*` and
-`[^1]` note markers. No MDX toolchain.
+Everything the site lists lives in one Postgres table, `writings`, with a `label` column
+constrained to `note`, `book` or `company`. The columns are flat: `title`, `subtitle` (the
+one line the lists print), `byline` (a book's author, a company's role), `body`, `year`,
+`period`, `url`, `reading_time`, `published`, `published_at`, `sort_order`. Only a note is
+ever a draft; a book and a company are written published.
+
+What differs between the three labels — the word the nav prints, the route, the metadata a
+list line carries, the metadata a page carries, the fields the editor shows — is in
+`src/lib/labels.tsx` and nowhere else. `src/components/site/entries.tsx` is the only list on
+the site and `src/components/site/entry.tsx` the only page.
+
+Bodies use a small block model (`p`, `h2`, `quote`, `note`) with a tiny inline formatter in
+`src/lib/inline.tsx` supporting `[label](url)`, `*emphasis*` and `[^1]` note markers. No MDX
+toolchain. What is left in `src/content` — the bio, the links — still changes with a deploy.
+
+The editor at `/admin` is one password, one list view, one form: `/admin/[section]` for the
+list, `/admin/[section]/new` and `/admin/[section]/[id]` for the editor, all driven by the
+same label spec. Notes autosave as drafts; books and companies save on a press.
 
 ## Design system
 
@@ -75,8 +98,8 @@ same face. There is no second family and no icon font.
 
 | Token | Size | Used by |
 |---|---|---|
-| `--t-s` | 0.9rem | dates, notes, sidenotes, hooks, roles, footer |
-| `--t-m` | 17 → 19px | body, nav, list titles, authors, subtitles |
+| `--t-s` | 0.9rem | dates, list lines, sidenotes, stamps, footer |
+| `--t-m` | 17 → 19px | body, nav, list titles, subtitles |
 | `--t-l` | 20.3 → 25.3px | section headings, article headings, running head |
 | `--t-xl` | 25.3 → 33.8px | page titles only |
 
@@ -94,26 +117,28 @@ indented block inline below it.
 
 Motion is limited to 120ms colour transitions on interactive elements. No entrance
 animation, no scroll-triggered reveals, no animation library. Every page renders fully
-without JavaScript; the only client components are the masthead and footer, and only because
-they read the pathname.
+without JavaScript; the masthead is the only client component on the public site, and only
+because it reads the pathname.
 
 ## SEO
 
 `metadataBase`, per-route canonicals, OpenGraph and Twitter cards (`src/app/opengraph-image.png`,
 regenerated from `public/photo.png`), JSON-LD `Person` with corrected `sameAs`, `sitemap.ts`,
-`robots.ts` and an RSS feed at `/feed.xml`. Title template: `%s · Oscar Mairey`.
+`robots.ts` and an RSS feed at `/feed.xml` carrying notes only. Title template:
+`%s · Oscar Mairey`.
 
 Social links are `github.com/oscarmairey`, `x.com/oscarmairey`,
 `linkedin.com/in/oscar-mairey`. The old `cesarioo` handles were wrong and are gone.
 
 ## Images
 
-`public/photo.png` is the only photograph on the site and appears once, in the home page
-footer at 96px. Do not add more. `src/app/icon.png`, `apple-icon.png`, `opengraph-image.png`
-and `twitter-image.png` are generated from it.
+There are no photographs on the site. `public/photo.png` is kept only as the source of the
+generated `src/app/icon.png`, `apple-icon.png`, `opengraph-image.png` and
+`twitter-image.png`; it is never rendered on a page. Do not add images.
 
 ## Stack
 
-Next.js 16 (App Router), React 19, Tailwind 3 for preflight, TypeScript. Three runtime
-dependencies: `next`, `react`, `react-dom`. Keep it that way; `next-themes`,
-`framer-motion`, Radix, lucide, cmdk and the shadcn `ui/` components were all removed.
+Next.js 16 (App Router), React 19, Tailwind 3 for preflight, TypeScript, Postgres through
+`pg`. Four runtime dependencies: `next`, `react`, `react-dom`, `pg`. Keep it that way;
+`next-themes`, `framer-motion`, Radix, lucide, cmdk and the shadcn `ui/` components were all
+removed.
