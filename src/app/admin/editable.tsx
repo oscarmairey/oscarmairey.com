@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { TOKEN } from "@/lib/inline";
 
 /** The whole of the WYSIWYG machinery, in one file and no dependencies.
@@ -20,6 +20,11 @@ import { TOKEN } from "@/lib/inline";
  *  region remounts with the caret put back where it belongs. */
 
 const SKIP = "[data-skip]";
+
+/** The caret has to be placed before the browser paints, and the server has no
+ *  browser to place it in. Choosing once, at load, keeps the hook order fixed
+ *  and keeps React from warning about a layout effect it cannot run. */
+const useCaretEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -232,7 +237,7 @@ export function Region({
      into the DOM the reader is typing in. */
   const initial = useRef(plain ? escapeHtml(source) : inlineHtml(source));
 
-  useLayoutEffect(() => {
+  useCaretEffect(() => {
     if (caret === null || !el.current) return;
     el.current.focus({ preventScroll: true });
     placeCaret(el.current, caret);
