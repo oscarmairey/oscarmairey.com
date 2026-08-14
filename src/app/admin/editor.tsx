@@ -1,11 +1,12 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Entry from "@/components/site/entry";
 import { parseBody, readingTime, serializeBlocks, type Block } from "@/lib/blocks";
-import { itemOf, sections, type Draft } from "@/lib/labels";
+import { formatDay } from "@/lib/format";
+import { itemOf, sections, type Draft, type EditField } from "@/lib/labels";
 import { deleteItem, saveItem, setItemPublished } from "./actions";
 import { Region, selectionIn } from "./editable";
 
@@ -68,6 +69,10 @@ export default function Editor({ initial, live }: Props) {
 
   const surface = useRef<HTMLDivElement>(null);
   const menuEl = useRef<HTMLDivElement>(null);
+
+  /* A date is not text: it is edited by the browser's own picker, in the place
+     the date is printed, and only while it is being set. */
+  const [dating, setDating] = useState(false);
 
   const body = useMemo(() => serializeBlocks(rows.map((row) => row.block)), [rows]);
 
@@ -487,29 +492,42 @@ export default function Editor({ initial, live }: Props) {
   /* A heading, a quote and a sidenote are what a block is; emphasis and a link
      are what a run of text is. So the first three are offered on a block's own
      text and the last two anywhere. */
-  /* Whatever a label prints under the title is typed under the title. For a
-     company that is the period and the role; for a note it is a date and a word
-     count, neither of which anyone would want to type. */
-  const stampSlot =
-    spec.stampFields.length === 0 ? undefined : (
-      <>
-        {spec.stampFields.map((field, i) => (
-          <Fragment key={field.key}>
-            {i > 0 && " · "}
-            <Region
-              as="span"
-              plain
-              source={draft[field.key]}
-              region={field.key}
-              placeholder={field.label}
-              caret={at(field.key)}
-              onChange={(value) => set({ [field.key]: value } as Partial<Draft>)}
-              onKeyDown={(event) => event.key === "Enter" && event.preventDefault()}
-            />
-          </Fragment>
-        ))}
-      </>
+  /* Whatever a label prints under the title is set under the title: a company's
+     period and role are typed there, and a note's date is picked there. The
+     label decides which, and where in the line; this only says how. */
+  const editField: EditField = (field) => {
+    if (field.kind === "date") {
+      return dating ? (
+        <input
+          className="adm-when"
+          type="date"
+          autoFocus
+          value={draft.date}
+          onChange={(event) => set({ date: event.target.value })}
+          onBlur={() => setDating(false)}
+          onKeyDown={(event) => event.key === "Enter" && setDating(false)}
+        />
+      ) : (
+        <button className="adm-when" type="button" onClick={() => setDating(true)}>
+          {draft.date ? formatDay(draft.date) : "Undated"}
+        </button>
+      );
+    }
+
+    return (
+      <Region
+        key={field.key}
+        as="span"
+        plain
+        source={draft[field.key]}
+        region={field.key}
+        placeholder={field.label}
+        caret={at(field.key)}
+        onChange={(value) => set({ [field.key]: value } as Partial<Draft>)}
+        onKeyDown={(event) => event.key === "Enter" && event.preventDefault()}
+      />
     );
+  };
 
   const current = menu?.part === "text" ? rows[menu.row]?.block.kind : undefined;
   const hasNote = menu ? noteAfter(rows, menu.row) !== -1 : false;
@@ -552,8 +570,8 @@ export default function Editor({ initial, live }: Props) {
                 onKeyDown={(event) => event.key === "Enter" && event.preventDefault()}
               />
             ),
-            stamp: stampSlot,
             body: blocks,
+            edit: editField,
           }}
         />
       </div>
@@ -604,21 +622,6 @@ export default function Editor({ initial, live }: Props) {
         </div>
       )}
 
-      {spec.fields.length > 0 && (
-        <div className="adm-meta">
-          {spec.fields.map((field) => (
-            <label key={field.key}>
-              <span>{field.label}</span>
-              <input
-                type={field.kind === "date" ? "date" : "text"}
-                value={draft[field.key]}
-                onChange={(event) => set({ [field.key]: event.target.value } as Partial<Draft>)}
-              />
-            </label>
-          ))}
-        </div>
-      )}
-
       <div className="adm-actions">
         <p className={error ? "adm-status bad" : "adm-status"} role="status">
           {status}
@@ -642,12 +645,6 @@ export default function Editor({ initial, live }: Props) {
           >
             {published ? "Unpublish" : "Publish"}
           </button>
-        )}
-
-        {onSite && draft.id !== null && (
-          <a className="adm-btn" href={`${spec.route}/${draft.slug}`} target="_blank" rel="noreferrer">
-            View
-          </a>
         )}
 
         <button

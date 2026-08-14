@@ -55,13 +55,16 @@ export type Draft = {
   date: string;
 };
 
-/** A value that is not part of the page the reader sees, or is derived into the
- *  stamp rather than typed into it. Everything else is edited in place. */
+/** A value that lives in the stamp under the title. Everything on a page is
+ *  edited where it is printed, and these are no exception: the editor hands the
+ *  stamp an `edit` and gets back a region, or a date, in place. */
 export type Field = {
   key: keyof Omit<Draft, "id" | "section" | "slug" | "title" | "subtitle" | "body">;
   label: string;
   kind?: "date";
 };
+
+export type EditField = (field: Field) => ReactNode;
 
 /** The metadata a list line carries, right of the title. A note's is a date, so
  *  it comes with the machine-readable day that goes in <time datetime>. */
@@ -83,12 +86,9 @@ export type Spec = {
   /** Only a note is ever a draft. */
   draftable: boolean;
   meta: (item: Item) => Meta;
-  stamp: (item: Item) => ReactNode;
-  /** Edited inside the stamp, where they are read, joined by a middle dot. */
-  stampFields: Field[];
-  /** Edited in the one quiet row under the page: never printed, or printed in
-   *  a shape nobody would want to type. */
-  fields: Field[];
+  /** The line under the title, for a reader and for the editor at once: given
+   *  an `edit`, the parts that are Oscar's to set come back editable. */
+  stamp: (item: Item, edit?: EditField) => ReactNode;
 };
 
 export const sections: Record<Section, Spec> = {
@@ -102,14 +102,18 @@ export const sections: Record<Section, Spec> = {
     sub: "The one sentence that gives the angle.",
     draftable: true,
     meta: (item) => ({ text: item.date ? formatMonth(item.date) : "", dateTime: item.date }),
-    stamp: (item) => (
+    stamp: (item, edit) => (
       <>
-        {item.date ? <time dateTime={item.date}>{formatDay(item.date)}</time> : "Undated"}
+        {edit ? (
+          edit({ key: "date", label: "Date", kind: "date" })
+        ) : item.date ? (
+          <time dateTime={item.date}>{formatDay(item.date)}</time>
+        ) : (
+          "Undated"
+        )}
         {item.readingTime && ` · ${item.readingTime}`}
       </>
     ),
-    stampFields: [],
-    fields: [{ key: "date", label: "Date", kind: "date" }],
   },
 
   books: {
@@ -121,11 +125,11 @@ export const sections: Record<Section, Spec> = {
     name: "Title",
     sub: "Why it stayed. One personal sentence, never a summary of the book.",
     draftable: false,
-    /* A book is a title and a reason. Nothing else earned a place. */
+    /* A book is a title and a reason. Nothing else earned a place on the page.
+       The author is stored, and shown to nobody: it appears under the title in
+       the editor, where Oscar sets it, and the reader never meets it. */
     meta: () => ({ text: "" }),
-    stamp: () => null,
-    stampFields: [],
-    fields: [{ key: "byline", label: "Author" }],
+    stamp: (_item, edit) => edit?.({ key: "byline", label: "Author" }) ?? null,
   },
 
   companies: {
@@ -138,13 +142,15 @@ export const sections: Record<Section, Spec> = {
     sub: "The one line the lists show.",
     draftable: false,
     meta: (item) => ({ text: item.period }),
-    stamp: (item) => [item.period, item.byline].filter(Boolean).join(" · "),
     /* Both are printed under the name, so both are typed there. */
-    stampFields: [
-      { key: "period", label: "Period" },
-      { key: "byline", label: "Role" },
-    ],
-    fields: [],
+    stamp: (item, edit) =>
+      edit ? (
+        <>
+          {edit({ key: "period", label: "Period" })} · {edit({ key: "byline", label: "Role" })}
+        </>
+      ) : (
+        [item.period, item.byline].filter(Boolean).join(" · ")
+      ),
   },
 };
 

@@ -4,7 +4,7 @@ import Entries from "@/components/site/entries";
 import Prose from "@/components/site/prose";
 import { parseBody } from "@/lib/blocks";
 import { inline } from "@/lib/inline";
-import type { Item, Section } from "@/lib/labels";
+import type { EditField, Item, Section } from "@/lib/labels";
 import { sections } from "@/lib/labels";
 
 /** How much of the rest of a list a page ends with: enough to be a way on,
@@ -27,13 +27,14 @@ export default function Entry({
   section: Section;
   item: Item;
   nearby?: Item[];
-  /** The editor hands in the three text regions as editable ones, so the page
-   *  it edits and the page it publishes are the same file. */
-  slots?: { title: ReactNode; sub: ReactNode; stamp?: ReactNode; body: ReactNode };
+  /** The editor hands in the text regions as editable ones, so the page it
+   *  edits and the page it publishes are the same file. `edit` is how the
+   *  stamp gets its own editable parts. */
+  slots?: { title: ReactNode; sub: ReactNode; body: ReactNode; edit: EditField };
 }) {
   const spec = sections[section];
   const blocks = parseBody(item.body);
-  const stamp = spec.stamp(item);
+  const stamp = spec.stamp(item, slots?.edit);
   const rest = nearby.slice(0, NEARBY);
 
   /* Being edited: the line under the title is always there to be clicked, even
@@ -44,7 +45,7 @@ export default function Entry({
       <article>
         <h1 className="title">{slots.title}</h1>
         <p className="sub">{slots.sub}</p>
-        {(slots.stamp || stamp) && <p className="stamp">{slots.stamp ?? stamp}</p>}
+        {stamp && <p className="stamp">{stamp}</p>}
         <div className="prose">{slots.body}</div>
       </article>
     );
