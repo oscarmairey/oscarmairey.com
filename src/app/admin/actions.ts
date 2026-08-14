@@ -12,9 +12,15 @@ import { forget } from "@/lib/uploads";
 /** The public pages render dynamically and read through the cache in
  *  src/lib/content.ts, which every write already invalidates. This clears the
  *  router cache too, so a publish is live on the next navigation, not in
- *  thirty seconds. */
+ *  thirty seconds.
+ *
+ *  One page, not the layout: revalidating from the root takes /admin with it,
+ *  and Next answers an action by re-rendering the page that called it — which
+ *  is the editor, with somebody typing in it. Every public page is dynamic and
+ *  reads the database on request anyway, so this is only about the router cache
+ *  in Oscar's own tab. */
 function published() {
-  revalidatePath("/", "layout");
+  revalidatePath("/");
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

@@ -54,6 +54,10 @@ export default function Editor({ initial, live }: Props) {
   const [rows, setRows] = useState<Row[]>(() => rowsOf(initial.body, seed.current));
   const [published, setPublished] = useState(live);
 
+  /* If a server render ever reaches this page again, it read the row after the
+     write that caused it, so its answer is the one to keep. */
+  useEffect(() => setPublished(live), [live]);
+
   const [caret, setCaret] = useState<Caret>(initial.id === null ? { key: "title", at: 0 } : null);
   const [menu, setMenu] = useState<Menu>(null);
   const [touch, setTouch] = useState<{ x: number; y: number } | null>(null);
@@ -117,9 +121,11 @@ export default function Editor({ initial, live }: Props) {
       savedRef.current = sent;
       setSavedAt(new Date());
       setDraft((d) => ({ ...d, id: result.id, slug: result.slug }));
+      /* No router.refresh() here. The lists behind this page are dynamic and
+         read the database when they are next asked for; refreshing from under
+         an autosave only interrupts whatever is being typed or selected. */
       if (payload.id === null) {
         window.history.replaceState(null, "", `/admin/${spec.section}/${result.id}`);
-        router.refresh();
       }
       return result.id;
     } catch {
@@ -434,7 +440,12 @@ export default function Editor({ initial, live }: Props) {
     if (!result.ok) return setError(result.error);
     setPublished(next);
     setSavedAt(new Date());
-    router.refresh();
+
+    /* No router.refresh(). Publishing revalidates the whole layout, and asking
+       for it back at once re-renders this page from the server, which can hand
+       the editor its own state from a moment ago: the button would flip back
+       to Publish over a note that is already on the site. The lists read the
+       database when they are next asked for, which is enough. */
   }
 
   async function remove() {
