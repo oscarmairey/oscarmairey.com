@@ -67,6 +67,7 @@ export default function Editor({ initial, live }: Props) {
   useEffect(() => setReady(true), []);
 
   const surface = useRef<HTMLDivElement>(null);
+  const menuEl = useRef<HTMLDivElement>(null);
 
   const body = useMemo(() => serializeBlocks(rows.map((row) => row.block)), [rows]);
 
@@ -340,7 +341,17 @@ export default function Editor({ initial, live }: Props) {
 
   useEffect(() => {
     if (!menu) return;
-    const close = () => setMenu(null);
+
+    /* A press inside the menu is the menu being used. Everything else closes
+       it. Asking the element itself beats trying to stop the event: React
+       listens on the document too, and neither of us can be sure who is
+       first. */
+    const close = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Node && menuEl.current?.contains(target)) return;
+      setMenu(null);
+    };
+
     document.addEventListener("mousedown", close);
     window.addEventListener("scroll", close, true);
     return () => {
@@ -395,8 +406,11 @@ export default function Editor({ initial, live }: Props) {
 
   const at = (k: string) => (caret?.key === k ? caret.at : null);
 
+  /* Keyed by the version, like every other block: a paragraph whose text was
+     rewritten under it — split, joined, marked with a note — has to come back
+     with the new text, and only a new key does that. */
   const paragraph = (row: Row, i: number, note: Row | undefined, first: boolean) => (
-    <p key={row.id}>
+    <p key={key(row, "text")}>
       <Region
         as="span"
         source={row.block.text}
@@ -407,7 +421,7 @@ export default function Editor({ initial, live }: Props) {
         onKeyDown={(event, el) => onKeyDown(i, "text", event, el)}
       />
       {note && note.block.kind === "note" && (
-        <span className="sn">
+        <span className="sn" key={key(note, "note")}>
           <span className="n">{note.block.n}</span>
           <Region
             as="span"
@@ -538,8 +552,10 @@ export default function Editor({ initial, live }: Props) {
 
       {menu && (
         <div
+          ref={menuEl}
           className="adm-menu"
           style={{ left: menu.x, top: menu.y }}
+          /* Keeps the selection the menu is about to act on. */
           onMouseDown={(event) => event.preventDefault()}
         >
           {current && current !== "note" && (

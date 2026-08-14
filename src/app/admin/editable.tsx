@@ -232,10 +232,12 @@ export function Region({
 }: RegionProps) {
   const el = useRef<HTMLElement>(null);
 
-  /* Captured once. The prop can change under us — it does on every keystroke,
-     since it is our own text coming back around — and must not be written back
-     into the DOM the reader is typing in. */
-  const initial = useRef(plain ? escapeHtml(source) : inlineHtml(source));
+  /* Captured once, object and all. React compares this prop by identity, so a
+     fresh { __html } literal — even one holding the very same string — makes it
+     rewrite the element on every render, which wipes whatever has just been
+     typed into it and collapses any selection inside it. The whole mount-once
+     contract rests on this ref never being replaced. */
+  const initial = useRef({ __html: plain ? escapeHtml(source) : inlineHtml(source) });
 
   useCaretEffect(() => {
     if (caret === null || !el.current) return;
@@ -264,7 +266,7 @@ export function Region({
         const text = event.clipboardData.getData("text/plain").replace(/\s+/g, " ");
         document.execCommand("insertText", false, text);
       }}
-      dangerouslySetInnerHTML={{ __html: initial.current }}
+      dangerouslySetInnerHTML={initial.current}
     />
   );
 }
