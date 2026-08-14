@@ -12,42 +12,30 @@ import { sections } from "@/lib/labels";
 
 const TTL = 30_000;
 
-type Entry<T> = { value: T; at: number };
-type Cell<T> = { entry?: Entry<T> };
+type Cached = { value: Item[]; at: number };
 
-const globalForContent = globalThis as unknown as {
-  __omContent?: Record<string, Cell<unknown>>;
-};
-
-/** The store survives hot reloads, which means it can outlive the shape of the
- *  code that made it. So cells are created on demand, one key at a time, rather
- *  than as a single object literal: adding a list here never finds an older
- *  store missing the key. */
-const store = (globalForContent.__omContent ??= {});
-
-const cell = <T,>(name: string): Cell<T> => ((store[name] ??= {}) as Cell<T>);
-
-async function read<T>(name: string, load: () => Promise<T>, empty: T): Promise<T> {
-  const slot = cell<T>(name);
-  const hit = slot.entry;
-  if (hit && Date.now() - hit.at < TTL) return hit.value;
-
-  try {
-    const value = await load();
-    slot.entry = { value, at: Date.now() };
-    return value;
-  } catch (error) {
-    console.error(`[content] ${name} unavailable: ${(error as Error).message}`);
-    return hit ? hit.value : empty;
-  }
-}
+/** Three lists, keyed by section. On globalThis so a hot reload does not throw
+ *  away what has already been read.
+ *
+ *  Under its own key, and checked: a reload swaps the code without restarting
+ *  the process, so whatever is already parked on globalThis was put there by
+ *  the version before this one. It once was a different shape, and the site
+ *  went down calling a method it did not have. A new shape gets a new name, and
+ *  anything that is not what this file expects is thrown away rather than
+ *  trusted. */
+const globalForContent = globalThis as unknown as { __omLists?: Map<Section, Cached> };
+if (!(globalForContent.__omLists instanceof Map)) globalForContent.__omLists = new Map();
+const store = globalForContent.__omLists;
 
 /** Called after every write in the editor so a publish is visible at once. */
 export function invalidateContent() {
-  for (const slot of Object.values(store)) slot.entry = undefined;
+  store.clear();
 }
 
-const COLUMNS = `
+/** Every column above the database reads, in the order the type declares them.
+ *  The editor selects the same ones plus its own two: keeping the list here and
+ *  extending it there is what stops the two drifting apart. */
+export const COLUMNS = `
   id::int AS id,
   slug,
   title,
@@ -55,28 +43,38 @@ const COLUMNS = `
   byline,
   body,
   period,
-  reading_time AS "readingTime",
-  to_char(COALESCE(published_at, created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
+  reading_time AS "readingTime"
 `;
 
 /** Newest first, everywhere. A note is dated by the day it was published and
  *  everything else by the day it was made. Nothing is ordered by hand. */
-const orderFor = (label: Label) =>
+export const orderFor = (label: Label) =>
   label === "note" ? "COALESCE(published_at, created_at) DESC, id DESC" : "created_at DESC, id DESC";
 
 /** Everything published under one label. Books and companies are written
  *  published, so this is the whole list for them and the live half for notes. */
-export function published(section: Section): Promise<Item[]> {
-  const { label } = sections[section];
-  return read(
-    section,
-    () =>
-      query<Item>(
-        `SELECT ${COLUMNS} FROM writings WHERE label = $1 AND published ORDER BY ${orderFor(label)}`,
-        [label],
-      ),
-    [],
-  );
+export async function published(section: Section): Promise<Item[]> {
+  let hit: Cached | undefined;
+
+  /* Everything, the cache included: a public page has no business throwing. */
+  try {
+    hit = store.get(section);
+    if (hit && Date.now() - hit.at < TTL) return hit.value;
+
+    const { label } = sections[section];
+    const value = await query<Item>(
+      `SELECT ${COLUMNS},
+              to_char(COALESCE(published_at, created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
+       FROM writings WHERE label = $1 AND published ORDER BY ${orderFor(label)}`,
+      [label],
+    );
+    store.set(section, { value, at: Date.now() });
+    return value;
+  } catch (error) {
+    /* The last good answer, or an empty page. Never a five hundred. */
+    console.error(`[content] ${section} unavailable: ${(error as Error).message}`);
+    return hit ? hit.value : [];
+  }
 }
 
 export async function publishedOne(section: Section, slug: string): Promise<Item | undefined> {
