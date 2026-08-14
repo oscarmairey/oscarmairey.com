@@ -14,8 +14,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return { title: isSection(section) ? sections[section].plural : "Editor" };
 }
 
-/** The same list the site prints, in the same classes, with drafts in it and
- *  every title leading to the editor instead of the page. */
+/** The same list the site prints, in the same classes, with the drafts in it —
+ *  which every label now has — and every title leading to the editor instead of
+ *  the page. */
 export default async function SectionList({ params }: Params) {
   await requireSession();
 
@@ -32,7 +33,7 @@ export default async function SectionList({ params }: Params) {
       <section className="section">
         <ul className="rows">
           {rows.map((row) => {
-            const draft = spec.draftable && !row.published;
+            const draft = !row.published;
             return (
               <li key={row.id}>
                 <p className="line">

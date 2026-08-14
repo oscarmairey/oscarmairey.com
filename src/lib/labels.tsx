@@ -3,6 +3,10 @@ import { formatDay, formatMonth } from "@/lib/format";
 
 /** One table, three labels, one vocabulary for all of it.
  *
+ *  Everything on the site has the same life: it is made, it is a draft nobody
+ *  else can see, and one day it is published. Nothing here decides that; the
+ *  labels differ only in what they say and what they carry.
+ *
  *  Everything that differs between a note, a book and a company is here: the
  *  word the nav prints, the route it lives on, the metadata a list line carries,
  *  the metadata a page carries, and the fields the editor shows. Everything else
@@ -83,8 +87,6 @@ export type Spec = {
   name: string;
   /** What the line under the title reads as when it is empty. */
   sub: string;
-  /** Only a note is ever a draft. */
-  draftable: boolean;
   meta: (item: Item) => Meta;
   /** The line under the title, for a reader and for the editor at once: given
    *  an `edit`, the parts that are Oscar's to set come back editable. */
@@ -100,7 +102,6 @@ export const sections: Record<Section, Spec> = {
     route: "/notes",
     name: "Title",
     sub: "The one sentence that gives the angle.",
-    draftable: true,
     meta: (item) => ({ text: item.date ? formatMonth(item.date) : "", dateTime: item.date }),
     stamp: (item, edit) => (
       <>
@@ -124,7 +125,6 @@ export const sections: Record<Section, Spec> = {
     route: "/books",
     name: "Title",
     sub: "Why it stayed. One personal sentence, never a summary of the book.",
-    draftable: false,
     /* A book is a title, whoever wrote it, and the reason it stayed. The author
        reads where every list keeps its metadata, and under the title on the
        page, which is the same place it is typed. */
@@ -140,7 +140,6 @@ export const sections: Record<Section, Spec> = {
     route: "/companies",
     name: "Name",
     sub: "The one line the lists show.",
-    draftable: false,
     meta: (item) => ({ text: item.period }),
     /* Both are printed under the name, so both are typed there. */
     stamp: (item, edit) =>

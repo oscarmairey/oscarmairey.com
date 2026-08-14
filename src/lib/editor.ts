@@ -50,13 +50,13 @@ const values = (draft: Draft) => [
   draft.date,
 ];
 
-/** A label that has no draft state is written published: a book or a company is
- *  on the site the moment it exists, and there is nothing to stage. */
+/** Nothing is born on the site. Every label starts as a draft and is published
+ *  by a press, which is also what freezes its address. */
 export async function createItem(draft: Draft): Promise<number> {
   const row = await queryOne<{ id: number }>(
     `INSERT INTO writings
-       (label, slug, title, subtitle, byline, body, period, reading_time, published_at, published)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::timestamptz, $1 <> 'note')
+       (label, slug, title, subtitle, byline, body, period, reading_time, published_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::timestamptz)
      RETURNING id::int AS id`,
     values(draft),
   );
@@ -76,7 +76,7 @@ export async function updateItem(id: number, draft: Draft): Promise<void> {
   invalidateContent();
 }
 
-/** Publishing dates a note if it has never been dated, and leaves the date
+/** Publishing dates an entry that has never been dated, and leaves the date
  *  alone otherwise, so unpublishing and republishing does not move it. */
 export async function setPublished(id: number, published: boolean): Promise<void> {
   await query(

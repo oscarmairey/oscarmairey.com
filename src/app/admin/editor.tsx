@@ -136,13 +136,13 @@ export default function Editor({ initial, live }: Props) {
   /* A draft saves itself. Anything already on the site does not: an edit to
      something a reader can reach should take a deliberate press. */
   useEffect(() => {
-    if (!spec.draftable || published) return;
+    if (published) return;
     if (snapshot === savedRef.current) return;
     if (!sendingRef.current.title.trim()) return;
 
     const timer = setTimeout(() => void persistRef.current(), AUTOSAVE_MS);
     return () => clearTimeout(timer);
-  }, [snapshot, published, spec.draftable]);
+  }, [snapshot, published]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -445,7 +445,7 @@ export default function Editor({ initial, live }: Props) {
     await deleteItem(spec.section, draft.id);
   }
 
-  const onSite = published || !spec.draftable;
+  const onSite = published;
 
   const status = !ready
     ? "Loading the editor…"
@@ -742,25 +742,18 @@ export default function Editor({ initial, live }: Props) {
           {status}
         </p>
 
-        <button
-          className={spec.draftable ? "adm-btn" : "adm-btn primary"}
-          type="button"
-          onClick={() => void persist()}
-          disabled={busy || !ready}
-        >
+        <button className="adm-btn" type="button" onClick={() => void persist()} disabled={busy || !ready}>
           Save
         </button>
 
-        {spec.draftable && (
-          <button
-            className={published ? "adm-btn" : "adm-btn primary"}
-            type="button"
-            onClick={() => void togglePublished(!published)}
-            disabled={busy || !ready}
-          >
-            {published ? "Unpublish" : "Publish"}
-          </button>
-        )}
+        <button
+          className={published ? "adm-btn" : "adm-btn primary"}
+          type="button"
+          onClick={() => void togglePublished(!published)}
+          disabled={busy || !ready}
+        >
+          {published ? "Unpublish" : "Publish"}
+        </button>
 
         <button
           className="adm-btn quiet"

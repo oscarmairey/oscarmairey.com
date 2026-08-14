@@ -85,7 +85,7 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
   try {
     /* The slug is never typed. It follows the title while the entry is still
        only Oscar's, and freezes the moment a reader can reach it: a published
-       address is a promise, and a book or a company is published on sight. */
+       address is a promise. */
     const current = draft.id === null ? undefined : await store.getItem(spec.label, draft.id);
     if (draft.id !== null && !current) return { ok: false, error: "That entry is gone." };
 
@@ -120,7 +120,6 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
   }
 }
 
-/** Notes only: nothing else has a draft state to leave. */
 export async function setItemPublished(
   section: string,
   id: number,
@@ -129,9 +128,7 @@ export async function setItemPublished(
   await requireSession();
 
   const target = asSection(section);
-  if (!target || !sections[target].draftable) {
-    return { ok: false, error: "That kind of entry has no draft state." };
-  }
+  if (!target) return { ok: false, error: "Unknown kind of entry." };
 
   try {
     await store.setPublished(id, publish);
