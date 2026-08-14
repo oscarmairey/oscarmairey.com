@@ -295,16 +295,21 @@
   .ends .after:only-child {
     margin-left: auto;
   }
-  /* The way it points, in the size and weight the line is already in: a single
-     guillemet, which is punctuation Literata draws itself, not an arrow it
-     would have to borrow from the system. It belongs to the link beside it, so
-     it turns with it. */
-  .ends .dir {
+  /* A whole side is one link — the guillemet that points the way, the word that
+     says which way, and the name it leads to — so the whole side turns. The
+     underline stays under the name: dragged beneath the label and the
+     punctuation as well, a hint becomes a rule. */
+  .ends a {
+    text-decoration: none;
     transition: color 120ms var(--ease);
   }
-  .ends span:has(a:hover) .dir,
-  .ends span:has(a:focus-visible) .dir {
+  .ends a:hover,
+  .ends a:focus-visible {
     color: var(--oxide);
+  }
+  .ends a:hover .t,
+  .ends a:focus-visible .t {
+    text-decoration-color: var(--oxide);
   }
 
   /* ---- prose ------------------------------------------------------- */
