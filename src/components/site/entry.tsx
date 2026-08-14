@@ -1,15 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import Entries from "@/components/site/entries";
 import Prose from "@/components/site/prose";
 import { parseBody } from "@/lib/blocks";
 import { inline } from "@/lib/inline";
 import type { EditField, Item, Section } from "@/lib/labels";
 import { sections } from "@/lib/labels";
-
-/** How much of the rest of a list a page ends with: enough to be a way on,
- *  short enough to stay a footnote to what was just read. */
-const NEARBY = 4;
 
 /** The one page on the site. A note, a book and a company are read the same
  *  way: the title, the line under it, a stamp of whatever metadata that label
@@ -21,12 +16,14 @@ const NEARBY = 4;
 export default function Entry({
   section,
   item,
-  nearby = [],
+  list = [],
   slots,
 }: {
   section: Section;
   item: Item;
-  nearby?: Item[];
+  /** The whole list this entry belongs to, in the order the list prints it,
+   *  which is the order the page reads its neighbours from. */
+  list?: Item[];
   /** The editor hands in the text regions as editable ones, so the page it
    *  edits and the page it publishes are the same file. `edit` is how the
    *  stamp gets its own editable parts. */
@@ -35,7 +32,13 @@ export default function Entry({
   const spec = sections[section];
   const blocks = parseBody(item.body);
   const stamp = spec.stamp(item, slots?.edit);
-  const rest = nearby.slice(0, NEARBY);
+
+  /* Every list is newest first, so the entry after this one in it is the one
+     that came before this one in life. The ends of the chain simply have one
+     neighbour. */
+  const at = list.findIndex((one) => one.slug === item.slug);
+  const before = at === -1 ? undefined : list[at + 1];
+  const after = at < 1 ? undefined : list[at - 1];
 
   /* Being edited: the line under the title is always there to be clicked, even
      when it is empty, and the record's own metadata is edited under the page
@@ -69,14 +72,19 @@ export default function Entry({
         )}
       </article>
 
-      {rest.length > 0 && (
-        <section className="section">
-          <h2>Nearby</h2>
-          <Entries section={section} items={rest} tight />
-          <Link className="more" href={spec.route}>
-            All {spec.plural.toLowerCase()}
-          </Link>
-        </section>
+      {(before || after) && (
+        <nav className="ends" aria-label={`Around this ${spec.one}`}>
+          {before && (
+            <p>
+              Before: <Link href={`${spec.route}/${before.slug}`}>{before.title}</Link>
+            </p>
+          )}
+          {after && (
+            <p>
+              After: <Link href={`${spec.route}/${after.slug}`}>{after.title}</Link>
+            </p>
+          )}
+        </nav>
       )}
     </>
   );

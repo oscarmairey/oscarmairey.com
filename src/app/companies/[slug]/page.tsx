@@ -19,11 +19,5 @@ export default async function CompanyPage({ params }: Params) {
   if (!company) notFound();
 
   const all = await published("companies");
-  return (
-    <Entry
-      section="companies"
-      item={company}
-      nearby={all.filter((c) => c.slug !== company.slug)}
-    />
-  );
+  return <Entry section="companies" item={company} list={all} />;
 }

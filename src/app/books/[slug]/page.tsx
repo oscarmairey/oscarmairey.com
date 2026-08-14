@@ -21,5 +21,5 @@ export default async function BookPage({ params }: Params) {
   if (!book) notFound();
 
   const all = await published("books");
-  return <Entry section="books" item={book} nearby={all.filter((b) => b.slug !== book.slug)} />;
+  return <Entry section="books" item={book} list={all} />;
 }

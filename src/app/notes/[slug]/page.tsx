@@ -19,5 +19,5 @@ export default async function NotePage({ params }: Params) {
   if (!note) notFound();
 
   const all = await published("notes");
-  return <Entry section="notes" item={note} nearby={all.filter((n) => n.slug !== note.slug)} />;
+  return <Entry section="notes" item={note} list={all} />;
 }
