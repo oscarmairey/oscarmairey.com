@@ -21,5 +21,5 @@ export default async function NewEntry({ params }: Params) {
   const { section } = await params;
   if (!isSection(section)) notFound();
 
-  return <Editor initial={emptyDraft(section)} live={false} />;
+  return <Editor initial={emptyDraft(section)} live={false} slug="" />;
 }

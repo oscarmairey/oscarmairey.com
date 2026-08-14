@@ -26,7 +26,7 @@ import { Body, Region, blocksFromDom, caretInto, figureHtml, listFrom, listInto 
  *  even held here: both are derived on the server, from the title and the
  *  body, and only the date it settles on comes back. */
 
-type Props = { initial: Draft; live: boolean };
+type Props = { initial: Draft; live: boolean; slug: string };
 
 const AUTOSAVE_MS = 3000;
 
@@ -38,7 +38,7 @@ type Menu = { x: number; y: number; block: HTMLElement | null; onText: boolean }
 const snapshotOf = (draft: Draft) =>
   JSON.stringify([draft.title, draft.subtitle, draft.body, draft.byline, draft.period, draft.date]);
 
-export default function Editor({ initial, live }: Props) {
+export default function Editor({ initial, live, slug }: Props) {
   const router = useRouter();
   const spec = sections[initial.section];
 
@@ -55,6 +55,11 @@ export default function Editor({ initial, live }: Props) {
      quietly drops what is typed into it is worse than one that says so. */
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
+
+  /* The address, which follows the title while the entry is a draft. Kept in a
+     ref because changing it is not a render: the URL moves, the editor does
+     not, and whatever is being typed stays where it is. */
+  const address = useRef(slug);
 
   const host = useRef<HTMLDivElement>(null);
   const menuEl = useRef<HTMLDivElement>(null);
@@ -98,8 +103,13 @@ export default function Editor({ initial, live }: Props) {
       savedRef.current = snapshotOf({ ...payload, id: result.id, date: result.date });
       setSavedAt(new Date());
       setDraft((d) => ({ ...d, id: result.id, date: result.date }));
-      if (payload.id === null) {
-        window.history.replaceState(null, "", `/admin/${spec.section}/${result.id}`);
+
+      /* A draft's slug follows its title, and a new entry has none until the
+         first save gives it one. Either way the address in the bar is the one
+         a reload should land on. */
+      if (result.slug && result.slug !== address.current) {
+        address.current = result.slug;
+        window.history.replaceState(null, "", `/admin/${spec.section}/${result.slug}`);
       }
       return result.id;
     } catch {

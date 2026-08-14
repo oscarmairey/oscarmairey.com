@@ -29,6 +29,13 @@ export function listItems(label: Label): Promise<Row[]> {
   );
 }
 
+export function getBySlug(label: Label, slug: string): Promise<Row | undefined> {
+  return queryOne<Row>(`SELECT ${COLUMNS} FROM writings WHERE label = $1 AND slug = $2`, [
+    label,
+    slug,
+  ]);
+}
+
 export function getItem(label: Label, id: number): Promise<Row | undefined> {
   return queryOne<Row>(`SELECT ${COLUMNS} FROM writings WHERE label = $1 AND id = $2`, [label, id]);
 }
@@ -111,7 +118,8 @@ export async function freeSlug(label: Label, base: string, keep: number | null):
     [label, base, keep],
   );
 
-  const taken = new Set(rows.map((row) => row.slug));
+  /* /admin/<section>/new is a page, so no entry may answer to that address. */
+  const taken = new Set(["new", ...rows.map((row) => row.slug)]);
   if (!taken.has(base)) return base;
   for (let n = 2; ; n += 1) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
 }

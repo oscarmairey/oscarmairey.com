@@ -35,7 +35,7 @@ export default async function SectionList({ params }: Params) {
           {rows.map((row) => (
             <li key={row.id}>
               <p className="line">
-                <Link className="t" href={`/admin/${section}/${row.id}`}>
+                <Link className="t" href={`/admin/${section}/${row.slug}`}>
                   {row.title || "Untitled"}
                 </Link>
                 <span className="when">{row.published ? spec.meta(row).text : "Draft"}</span>

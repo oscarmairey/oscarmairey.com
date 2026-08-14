@@ -74,7 +74,9 @@ export async function signIn(_state: LoginState, form: FormData): Promise<LoginS
 /** The date comes back because publishing can create one: the server stamps a
  *  row the first time it goes live, and an editor still holding "" would wipe
  *  it on the next save. */
-export type SaveResult = { ok: true; id: number; date: string } | { ok: false; error: string };
+export type SaveResult =
+  | { ok: true; id: number; date: string; slug: string }
+  | { ok: false; error: string };
 
 export async function saveItem(draft: Draft): Promise<SaveResult> {
   await requireSession();
@@ -122,7 +124,7 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
        are dynamic, they read on request, and the write already emptied the
        cache they read through. Publishing and deleting revalidate, because
        those are the moments a list changes. */
-    return { ok: true, id, date: input.date };
+    return { ok: true, id, date: input.date, slug };
   } catch (error) {
     if (store.isSlugTaken(error)) {
       return { ok: false, error: `Two ${spec.plural.toLowerCase()} are fighting over one address.` };
@@ -145,7 +147,7 @@ export async function setItemPublished(
     /* Read back for the date: the first publish stamps a row that had none. */
     const row = await store.getItem(sections[section].label, id);
     published();
-    return { ok: true, id, date: row?.date ?? "" };
+    return { ok: true, id, date: row?.date ?? "", slug: row?.slug ?? "" };
   } catch (error) {
     return { ok: false, error: message(error) };
   }
