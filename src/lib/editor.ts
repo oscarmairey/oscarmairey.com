@@ -12,7 +12,6 @@ import { sections } from "@/lib/labels";
 
 const COLUMNS = `
   id::int AS id,
-  label,
   slug,
   title,
   subtitle,
@@ -38,9 +37,10 @@ export function getItem(label: Label, id: number): Promise<Row | undefined> {
   return queryOne<Row>(`SELECT ${COLUMNS} FROM writings WHERE label = $1 AND id = $2`, [label, id]);
 }
 
-const values = (draft: Draft) => [
+/** The slug is not the draft's: it is derived on save and passed in beside it. */
+const values = (slug: string, draft: Draft) => [
   sections[draft.section].label,
-  draft.slug,
+  slug,
   draft.title,
   draft.subtitle,
   draft.byline,
@@ -52,20 +52,20 @@ const values = (draft: Draft) => [
 
 /** Nothing is born on the site. Every label starts as a draft and is published
  *  by a press, which is also what freezes its address. */
-export async function createItem(draft: Draft): Promise<number> {
+export async function createItem(slug: string, draft: Draft): Promise<number> {
   const row = await queryOne<{ id: number }>(
     `INSERT INTO writings
        (label, slug, title, subtitle, byline, body, period, reading_time, published_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::timestamptz)
      RETURNING id::int AS id`,
-    values(draft),
+    values(slug, draft),
   );
   invalidateContent();
   return row!.id;
 }
 
-export async function updateItem(id: number, draft: Draft): Promise<void> {
-  const [label, ...rest] = values(draft);
+export async function updateItem(id: number, slug: string, draft: Draft): Promise<void> {
+  const [label, ...rest] = values(slug, draft);
   await query(
     `UPDATE writings
      SET slug = $1, title = $2, subtitle = $3, byline = $4, body = $5, period = $6,

@@ -49,7 +49,6 @@ export function invalidateContent() {
 
 const COLUMNS = `
   id::int AS id,
-  label,
   slug,
   title,
   subtitle,

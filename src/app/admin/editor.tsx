@@ -19,8 +19,9 @@ import { Region, selectionIn } from "./editable";
  *  Everything the reader does not see — a book's author, a company's period,
  *  a note's date, the order, the publish state — is one quiet row underneath.
  *
- *  The slug and the reading time are not edited at all. Both are derived on the
- *  server at save time from the title and the body. */
+ *  The slug and the reading time are not edited at all, and the slug is not
+ *  even held here: both are derived on the server, from the title and the
+ *  body, and only the date it settles on comes back. */
 
 type Props = { initial: Draft; live: boolean };
 
@@ -35,6 +36,11 @@ type Part = "text" | "source" | "note";
 type Caret = { key: string; at: number } | null;
 
 type Menu = { x: number; y: number; row: number; part: Part; start: number; end: number } | null;
+
+/** What counts as a change. The reading time is left out because it is derived
+ *  from the body, which is in here already. */
+const snapshotOf = (draft: Draft) =>
+  JSON.stringify([draft.title, draft.subtitle, draft.body, draft.byline, draft.period, draft.date]);
 
 const rowsOf = (body: string, seed: { n: number }): Row[] => {
   const blocks = parseBody(body);
@@ -91,14 +97,7 @@ export default function Editor({ initial, live }: Props) {
 
   const sending: Draft = { ...draft, body, readingTime: readingTime(body) };
 
-  const snapshot = JSON.stringify([
-    sending.title,
-    sending.subtitle,
-    sending.body,
-    sending.byline,
-    sending.period,
-    sending.date,
-  ]);
+  const snapshot = snapshotOf(sending);
 
   const savedRef = useRef(snapshot);
   const sendingRef = useRef(sending);
@@ -108,7 +107,6 @@ export default function Editor({ initial, live }: Props) {
 
   async function persist(): Promise<number | null> {
     const payload = sendingRef.current;
-    const sent = snapshot;
 
     setBusy(true);
     setError("");
@@ -118,9 +116,13 @@ export default function Editor({ initial, live }: Props) {
         setError(result.error);
         return null;
       }
-      savedRef.current = sent;
+      /* The date can come back changed — a first publish stamps one, and an
+         unreadable one is dropped — so what counts as saved is what the server
+         settled on, not what was sent. */
+      const settled = { ...payload, id: result.id, date: result.date };
+      savedRef.current = snapshotOf(settled);
       setSavedAt(new Date());
-      setDraft((d) => ({ ...d, id: result.id, slug: result.slug }));
+      setDraft((d) => ({ ...d, id: result.id, date: result.date }));
       /* No router.refresh() here. The lists behind this page are dynamic and
          read the database when they are next asked for; refreshing from under
          an autosave only interrupts whatever is being typed or selected. */
@@ -439,6 +441,12 @@ export default function Editor({ initial, live }: Props) {
 
     if (!result.ok) return setError(result.error);
     setPublished(next);
+
+    /* Publishing an undated entry dates it. Without taking that back, the next
+       save would send the empty date the editor still holds and un-date what is
+       already on the site. */
+    setDraft((d) => ({ ...d, date: result.date }));
+    savedRef.current = snapshotOf({ ...sendingRef.current, date: result.date });
     setSavedAt(new Date());
 
     /* No router.refresh(). Publishing revalidates the whole layout, and asking

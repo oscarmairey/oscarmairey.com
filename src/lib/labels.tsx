@@ -30,7 +30,6 @@ export type Section = "notes" | "books" | "companies";
  *    body      long form, in the block format of src/lib/blocks.ts */
 export type Item = {
   id: number;
-  label: Label;
   slug: string;
   title: string;
   subtitle: string;
@@ -49,7 +48,6 @@ export type Row = Item & { published: boolean };
 export type Draft = {
   id: number | null;
   section: Section;
-  slug: string;
   title: string;
   subtitle: string;
   byline: string;
@@ -63,7 +61,7 @@ export type Draft = {
  *  edited where it is printed, and these are no exception: the editor hands the
  *  stamp an `edit` and gets back a region, or a date, in place. */
 export type Field = {
-  key: keyof Omit<Draft, "id" | "section" | "slug" | "title" | "subtitle" | "body">;
+  key: keyof Omit<Draft, "id" | "section" | "title" | "subtitle" | "body">;
   label: string;
   kind?: "date";
 };
@@ -162,7 +160,6 @@ export function isSection(value: string): value is Section {
 export const emptyDraft = (section: Section): Draft => ({
   id: null,
   section,
-  slug: "",
   title: "",
   subtitle: "",
   byline: "",
@@ -175,7 +172,6 @@ export const emptyDraft = (section: Section): Draft => ({
 export const draftOf = (section: Section, row: Row): Draft => ({
   id: row.id,
   section,
-  slug: row.slug,
   title: row.title,
   subtitle: row.subtitle,
   byline: row.byline,
@@ -185,9 +181,6 @@ export const draftOf = (section: Section, row: Row): Draft => ({
   date: row.date,
 });
 
-/** A draft is an item as far as the preview and the stamp are concerned. */
-export const itemOf = (draft: Draft): Item => ({
-  ...draft,
-  id: draft.id ?? 0,
-  label: sections[draft.section].label,
-});
+/** A draft is an item as far as the page it is being typed into is concerned.
+ *  The slug is the server's business, so an unsaved draft has none. */
+export const itemOf = (draft: Draft): Item => ({ ...draft, id: draft.id ?? 0, slug: "" });

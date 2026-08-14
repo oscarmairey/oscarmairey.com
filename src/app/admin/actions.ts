@@ -71,7 +71,10 @@ export async function signIn(_state: LoginState, form: FormData): Promise<LoginS
 
 /* ---- one editor, three labels ------------------------------------------- */
 
-export type SaveResult = { ok: true; id: number; slug: string } | { ok: false; error: string };
+/** The date comes back because publishing can create one: the server stamps a
+ *  row the first time it goes live, and an editor still holding "" would wipe
+ *  it on the next save. */
+export type SaveResult = { ok: true; id: number; date: string } | { ok: false; error: string };
 
 /** A server action is a public endpoint, so the section arrives as a string
  *  from the network and is checked here rather than trusted. */
@@ -102,7 +105,6 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
     const input: Draft = {
       ...draft,
       section,
-      slug,
       title: title || "Untitled",
       subtitle: draft.subtitle.trim(),
       byline: draft.byline.trim(),
@@ -112,12 +114,12 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
       date: DATE.test(draft.date) ? draft.date : "",
     };
 
-    const id = draft.id === null ? await store.createItem(input) : draft.id;
-    if (draft.id !== null) await store.updateItem(id, input);
+    const id = draft.id === null ? await store.createItem(slug, input) : draft.id;
+    if (draft.id !== null) await store.updateItem(id, slug, input);
 
     if (current) await sweep(current.body, input.body);
     published();
-    return { ok: true, id, slug };
+    return { ok: true, id, date: input.date };
   } catch (error) {
     if (store.isSlugTaken(error)) {
       return { ok: false, error: `Two ${spec.plural.toLowerCase()} are fighting over one address.` };
@@ -138,9 +140,10 @@ export async function setItemPublished(
 
   try {
     await store.setPublished(id, publish);
+    /* Read back for the date: the first publish stamps a row that had none. */
     const row = await store.getItem(sections[target].label, id);
     published();
-    return { ok: true, id, slug: row?.slug ?? "" };
+    return { ok: true, id, date: row?.date ?? "" };
   } catch (error) {
     return { ok: false, error: message(error) };
   }
