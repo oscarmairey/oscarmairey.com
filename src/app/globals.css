@@ -275,19 +275,25 @@
   }
 
   /* ---- what came before this, and what came after ------------------ */
-  /* Two more list rows, so they are dressed as list rows: the title wears .t
-     like every clickable title on the site, and the word in front of it wears
-     .when like every piece of metadata beside one. Nothing new is introduced
-     here at all: no rule above it, no size of its own, only the room it needs
-     to read as its own thing. */
+  /* Two more list rows, so they are dressed as list rows: the whole line reads
+     in one voice, the one a list title reads in, and the title inside it wears
+     .t like every clickable title on the site. The word in front is not
+     metadata about the link, it is the beginning of the sentence the link
+     finishes, so it is the same size and the same weight. Only the link is a
+     link, and only it goes to oxide under the cursor. */
   .ends {
     margin-top: 2.75rem;
+    font-weight: 500;
   }
-  .ends p + p {
-    margin-top: 0.55rem;
+  /* One row, kept apart by .line, the same way a section title and its link
+     are. Too narrow to hold both and they wrap, and a wrapped row starts on
+     the left like everything else. An After with nothing before it still ends
+     the row, because that is where it belongs in time. */
+  .ends .line {
+    row-gap: 0.35rem;
   }
-  .ends .when {
-    margin-right: 0.45rem;
+  .ends .after:only-child {
+    margin-left: auto;
   }
 
   /* ---- prose ------------------------------------------------------- */
