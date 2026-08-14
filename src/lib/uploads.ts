@@ -18,7 +18,7 @@ const directory = () => process.env.UPLOADS_DIR || join(process.cwd(), "uploads"
  *  The name has to match the shape this module writes, and the path it resolves
  *  to has to still be inside the directory. Either check alone would do; both
  *  cost nothing. */
-export function pathFor(name: string): string | null {
+function pathFor(name: string): string | null {
   if (!NAME.test(name)) return null;
   const base = resolve(directory());
   const path = resolve(base, name);

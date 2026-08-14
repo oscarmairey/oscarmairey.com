@@ -70,8 +70,7 @@ export function parseBody(body: string): Block[] {
     });
 }
 
-/** The inverse, used to seed the database from the old content files and to keep
- *  the format honest: parse(serialize(blocks)) is blocks. */
+/** The inverse, and what the editor saves through: parse(serialize(b)) is b. */
 export function serializeBlocks(blocks: Block[]): string {
   return blocks
     .map((block) => {

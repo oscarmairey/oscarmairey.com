@@ -164,9 +164,6 @@ a.mast-name:hover {
 .lede {
   margin-top: 2rem;
 }
-.lede p + p {
-  margin-top: 1.15em;
-}
 .title {
   margin-top: 2.4rem;
   font-size: var(--t-xl);
@@ -247,20 +244,6 @@ a.t:focus-visible {
   line-height: 1.55;
   color: var(--ink-2);
 }
-.more {
-  display: inline-block;
-  margin-top: 1.5rem;
-  font-size: var(--t-s);
-  color: var(--ink-3);
-  text-decoration: underline;
-  text-decoration-color: var(--rule-firm);
-  text-underline-offset: 0.16em;
-  transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
-}
-.more:hover {
-  color: var(--oxide);
-  text-decoration-color: var(--oxide);
-}
 
 /* ---- what came before this, and what came after ------------------ */
 /* Two more list rows, so they are dressed as list rows: the whole line reads
@@ -303,9 +286,6 @@ a.t:focus-visible {
 /* ---- prose ------------------------------------------------------- */
 .prose {
   margin-top: 2.2rem;
-}
-.section > .prose {
-  margin-top: 1.1rem;
 }
 .prose p {
   margin-top: 1.15em;
@@ -399,9 +379,6 @@ a.t:focus-visible {
   font-size: var(--t-s);
   color: var(--ink-3);
 }
-.site-footer p + p {
-  margin-top: 0.35rem;
-}
 .site-footer a {
   text-decoration: none;
   transition: color 120ms var(--ease);
@@ -433,8 +410,7 @@ a.t:focus-visible {
     --oxide: #7a2f21;
   }
   .mast nav,
-  .skip,
-  .more {
+  .skip {
     display: none;
   }
   body {

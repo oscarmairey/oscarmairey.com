@@ -7,8 +7,8 @@ import { sections } from "@/lib/labels";
  *  component and nothing else: a title that leads to its own page, whatever
  *  metadata that label carries on the right, and the one line underneath.
  *
- *  `tight` drops the line underneath, which is what the home page and the
- *  bottom of an entry want: a title and a date, nothing else. */
+ *  `tight` drops the line underneath, which is what the home page wants: a
+ *  title and a date, nothing else. */
 export default function Entries({
   section,
   items,

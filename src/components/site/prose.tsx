@@ -2,9 +2,8 @@ import type { Block } from "@/lib/blocks";
 import { inline } from "@/lib/inline";
 import { imageSize, mediaUrl } from "@/lib/media";
 
-/** The one renderer for a writing's body. The public page and the editor's
- *  preview both mount this component, so the preview cannot drift from the
- *  page: there is only one implementation to drift from. */
+/** The one renderer for a body. The public page mounts it; the editor draws
+ *  the same blocks itself, editable, in the same classes. */
 export default function Prose({ blocks }: { blocks: Block[] }) {
   return (
     <div className="prose">

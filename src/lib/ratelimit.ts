@@ -10,7 +10,7 @@ const buckets = (globalForLimit.__omBuckets ??= new Map());
 const WINDOW = 15 * 60 * 1000;
 const MAX = 8;
 
-export type Verdict = { ok: true } | { ok: false; retryAfter: number };
+type Verdict = { ok: true } | { ok: false; retryAfter: number };
 
 export function hit(key: string): Verdict {
   const now = Date.now();

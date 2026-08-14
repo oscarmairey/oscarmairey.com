@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { createHmac, scrypt, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -21,24 +21,14 @@ function derive(password: string, salt: Buffer, params: typeof SCRYPT): Promise<
   });
 }
 
-/** `scrypt:N:r:p:salt:key`, salt and key base64url.
+/** Reads `scrypt:N:r:p:salt:key`, salt and key base64url.
  *
  *  Not the usual `$`-separated PHC string, and not plain base64, on purpose:
  *  this value lives in a .env file, and dotenv expands `$name` and mangles the
- *  hash on the way in. Colons and base64url survive that untouched. */
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const key = await derive(password, salt, SCRYPT);
-  return [
-    "scrypt",
-    SCRYPT.N,
-    SCRYPT.r,
-    SCRYPT.p,
-    salt.toString("base64url"),
-    key.toString("base64url"),
-  ].join(":");
-}
-
+ *  hash on the way in. Colons and base64url survive that untouched.
+ *
+ *  Nothing here writes one. scripts/hash-password.mjs is the only producer,
+ *  and it is run by hand, off the server, on the day the password changes. */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.trim().split(":");
   if (parts.length !== 6 || parts[0] !== "scrypt") return false;

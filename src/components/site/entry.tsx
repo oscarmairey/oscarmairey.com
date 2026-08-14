@@ -41,8 +41,7 @@ export default function Entry({
   const after = at < 1 ? undefined : list[at - 1];
 
   /* Being edited: the line under the title is always there to be clicked, even
-     when it is empty, and the record's own metadata is edited under the page
-     rather than inside it. */
+     when it is empty, and the stamp hands its own parts to the editor. */
   if (slots) {
     return (
       <article>

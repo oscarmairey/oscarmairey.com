@@ -6,13 +6,11 @@
    Tokens come from globals.css. The lists and the page being edited use the
    public classes on purpose — what is shown is what will ship — so what is
    left here is only the parts a reader never sees: the editable regions, the
-   metadata row, the formatting menu and the bar that saves.
+   date in the stamp, the formatting menu and the bar that saves.
    ===================================================================== */
 
-/* A scope, not a layout: .wrap around it has already centred the column. */
-.adm {
-  display: block;
-}
+/* .adm is a scope and nothing else: .wrap around it has already centred the
+   column, and a div is a block without being told. */
 
 /* ---- editing in place ------------------------------------------------ */
 
@@ -143,6 +141,24 @@
 
 .adm-status.bad {
   color: var(--oxide);
+}
+
+/* The way out of a list, and back to it from an editor. It lived in
+   globals.css when the public pages had their own; they do not. */
+.more {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-firm);
+  text-underline-offset: 0.16em;
+  transition: color 120ms var(--ease), text-decoration-color 120ms var(--ease);
+}
+
+.more:hover {
+  color: var(--oxide);
+  text-decoration-color: var(--oxide);
 }
 
 /* ---- buttons --------------------------------------------------------- */

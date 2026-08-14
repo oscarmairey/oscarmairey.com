@@ -16,8 +16,8 @@ import { Region, selectionIn } from "./editable";
  *  under the title and its body handed in as editable regions. Type in the
  *  page, press Save, and the same markup is what a reader gets.
  *
- *  Everything the reader does not see — a book's author, a company's period,
- *  a note's date, the order, the publish state — is one quiet row underneath.
+ *  Whatever a label prints under the title — a company's period and role, a
+ *  book's author, a note's date — is set in the stamp, where it prints.
  *
  *  The slug and the reading time are not edited at all, and the slug is not
  *  even held here: both are derived on the server, from the title and the
@@ -464,8 +464,6 @@ export default function Editor({ initial, live }: Props) {
     await deleteItem(spec.section, draft.id);
   }
 
-  const onSite = published;
-
   const status = !ready
     ? "Loading the editor…"
     : error
@@ -478,7 +476,7 @@ export default function Editor({ initial, live }: Props) {
             ? `Saved at ${savedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
             : draft.id === null
               ? "Not saved yet"
-              : onSite
+              : published
                 ? "On the site"
                 : "Draft";
 
@@ -575,7 +573,7 @@ export default function Editor({ initial, live }: Props) {
             onFocus={() => (active.current = i)}
           />
           <Region
-            key={`${key(row, "source")}`}
+            key={key(row, "source")}
             as="p"
             className="src"
             source={row.block.source}

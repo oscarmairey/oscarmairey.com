@@ -32,20 +32,17 @@ export default async function SectionList({ params }: Params) {
 
       <section className="section">
         <ul className="rows">
-          {rows.map((row) => {
-            const draft = !row.published;
-            return (
-              <li key={row.id}>
-                <p className="line">
-                  <Link className="t" href={`/admin/${section}/${row.id}`}>
-                    {row.title || "Untitled"}
-                  </Link>
-                  <span className="when">{draft ? "Draft" : spec.meta(row).text}</span>
-                </p>
-                {row.subtitle && <p className="note">{row.subtitle}</p>}
-              </li>
-            );
-          })}
+          {rows.map((row) => (
+            <li key={row.id}>
+              <p className="line">
+                <Link className="t" href={`/admin/${section}/${row.id}`}>
+                  {row.title || "Untitled"}
+                </Link>
+                <span className="when">{row.published ? spec.meta(row).text : "Draft"}</span>
+              </p>
+              {row.subtitle && <p className="note">{row.subtitle}</p>}
+            </li>
+          ))}
         </ul>
 
         <div className="adm-buttons">

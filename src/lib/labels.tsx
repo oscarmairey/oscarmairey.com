@@ -60,7 +60,7 @@ export type Draft = {
 /** A value that lives in the stamp under the title. Everything on a page is
  *  edited where it is printed, and these are no exception: the editor hands the
  *  stamp an `edit` and gets back a region, or a date, in place. */
-export type Field = {
+type Field = {
   key: keyof Omit<Draft, "id" | "section" | "title" | "subtitle" | "body">;
   label: string;
   kind?: "date";
@@ -70,9 +70,9 @@ export type EditField = (field: Field) => ReactNode;
 
 /** The metadata a list line carries, right of the title. A note's is a date, so
  *  it comes with the machine-readable day that goes in <time datetime>. */
-export type Meta = { text: string; dateTime?: string };
+type Meta = { text: string; dateTime?: string };
 
-export type Spec = {
+type Spec = {
   label: Label;
   section: Section;
   /** The word the nav and the headings print. */

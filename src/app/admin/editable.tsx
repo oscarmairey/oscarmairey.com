@@ -19,8 +19,6 @@ import { TOKEN } from "@/lib/inline";
  *  structural edit does need to rewrite one, the parent changes its key and the
  *  region remounts with the caret put back where it belongs. */
 
-const SKIP = "[data-skip]";
-
 /** The caret has to be placed before the browser paints, and the server has no
  *  browser to place it in. Choosing once, at load, keeps the hook order fixed
  *  and keeps React from warning about a layout effect it cannot run. */
@@ -30,7 +28,7 @@ const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** Source text to the markup the public page would render for it. */
-export function inlineHtml(text: string): string {
+function inlineHtml(text: string): string {
   let out = "";
   let last = 0;
 
@@ -70,7 +68,6 @@ function scan(node: Node, stop: Stop, state: Scan) {
   }
 
   if (!(node instanceof HTMLElement)) return;
-  if (node.matches(SKIP)) return;
 
   const tag = node.tagName;
 
@@ -110,14 +107,14 @@ function children(parent: Node, stop: Stop, state: Scan) {
 
 /** What a region holds, as source text. Non-breaking spaces are what a browser
  *  leaves behind when two spaces are typed; they are not content. */
-export function readSource(root: HTMLElement): string {
+function readSource(root: HTMLElement): string {
   const state: Scan = { out: "", done: false };
   children(root, null, state);
   return state.out.replace(/\u00a0/g, " ");
 }
 
 /** Where a DOM position falls in that source text. */
-export function sourceOffset(root: HTMLElement, node: Node, offset: number): number {
+function sourceOffset(root: HTMLElement, node: Node, offset: number): number {
   const state: Scan = { out: "", done: false };
   children(root, { node, offset }, state);
   return state.out.length;
@@ -139,7 +136,7 @@ export function selectionIn(root: HTMLElement): { start: number; end: number } |
 
 /** The inverse: put the caret at a source offset. Offsets that land inside a
  *  token's punctuation settle on the nearest place a caret can actually go. */
-export function placeCaret(root: HTMLElement, offset: number) {
+function placeCaret(root: HTMLElement, offset: number) {
   let count = 0;
   let target: Text | null = null;
   let at = 0;
@@ -157,7 +154,7 @@ export function placeCaret(root: HTMLElement, offset: number) {
         continue;
       }
 
-      if (!(child instanceof HTMLElement) || child.matches(SKIP)) continue;
+      if (!(child instanceof HTMLElement)) continue;
 
       const tag = child.tagName;
       if (tag === "SUP" && child.dataset.ref) {
@@ -199,9 +196,9 @@ export function placeCaret(root: HTMLElement, offset: number) {
 
 /* ---- the region ---------------------------------------------------------- */
 
-export type Tag = "h1" | "h2" | "p" | "span" | "div" | "figcaption";
+type Tag = "h2" | "p" | "span" | "figcaption";
 
-export type RegionProps = {
+type RegionProps = {
   as: Tag;
   className?: string;
   /** The source text. Read on mount and never again: see the note above. */
@@ -215,7 +212,7 @@ export type RegionProps = {
   caret?: number | null;
   onChange: (source: string) => void;
   onKeyDown?: (event: React.KeyboardEvent<HTMLElement>, el: HTMLElement) => void;
-  onFocus?: (el: HTMLElement) => void;
+  onFocus?: () => void;
   /** An image pasted into the text. Handled by the editor, not by the region. */
   onFiles?: (files: File[]) => void;
 };
@@ -262,7 +259,7 @@ export function Region({
       data-placeholder={placeholder}
       onInput={(event) => onChange(readSource(event.currentTarget as HTMLElement))}
       onKeyDown={(event) => onKeyDown?.(event, event.currentTarget as HTMLElement)}
-      onFocus={(event) => onFocus?.(event.currentTarget as HTMLElement)}
+      onFocus={() => onFocus?.()}
       onPaste={(event) => {
         /* An image on the clipboard is an image in the page. */
         const files = Array.from(event.clipboardData.files).filter((file) =>
