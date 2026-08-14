@@ -33,6 +33,24 @@
   min-width: 1ch;
 }
 
+/* The body is one editing host, so clicking anywhere in the column — including
+   the blank to the right of a line — puts the caret in the nearest place, which
+   is what the browser does inside an editing host and what it could not do when
+   every paragraph was its own. It needs a floor to be clickable when empty. */
+.adm .prose {
+  min-height: 6rem;
+}
+
+.adm .prose > p:only-child:has(br:only-child)::before {
+  content: "Write…";
+  color: var(--ink-3);
+}
+
+/* The number in front of a sidenote is drawn, not typed. */
+.adm .prose .sn .n {
+  user-select: none;
+}
+
 /* ---- the stamp, which is set where it is read ------------------------- */
 
 /* A date is picked, not typed, so it is a button that becomes the browser's

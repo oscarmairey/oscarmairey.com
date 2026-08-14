@@ -1,41 +1,36 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import type { Block } from "@/lib/blocks";
 import { TOKEN } from "@/lib/inline";
-import { images } from "@/lib/media";
+import { imageSize, images, mediaUrl } from "@/lib/media";
 
 /** The whole of the WYSIWYG machinery, in one file and no dependencies.
  *
- *  A region is one editable run of text: a title, a subtitle, a paragraph, a
- *  heading, a quote, the line that names a quote, a sidenote. It is rendered
- *  with the classes the public page uses, so editing happens inside the page
- *  rather than beside it.
+ *  The body is one editing host, not one per block, because a reader selecting
+ *  a sentence does not care where a paragraph ends and the browser cannot carry
+ *  a selection across two of them. Inside it the browser does the editing it is
+ *  good at — splitting paragraphs, joining them, breaking a line, dragging a
+ *  selection down the page — and this file does the part it is bad at, which is
+ *  saying what any of that means.
  *
- *  The storage format never changes: what a region holds is the same source
- *  text src/lib/blocks.ts parses, and the three inline tokens of
- *  src/lib/inline.tsx are rendered live and read back out.
- *
- *  React writes a region's content exactly once, on mount, and never touches it
- *  again — that is what keeps the caret from jumping while typing. When a
- *  structural edit does need to rewrite one, the parent changes its key and the
- *  region remounts with the caret put back where it belongs. */
-
-/** The caret has to be placed before the browser paints, and the server has no
- *  browser to place it in. Choosing once, at load, keeps the hook order fixed
- *  and keeps React from warning about a layout effect it cannot run. */
-const useCaretEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+ *  So nothing here writes the DOM while it is being typed in. React mounts the
+ *  host once and never touches it again; every edit is the browser's; and after
+ *  each one the DOM is read back into the block model of src/lib/blocks.ts. The
+ *  stored format never changes, and the caret never moves under anybody's
+ *  hands, because nothing moves it. */
 
 const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** Source text to the markup the public page would render for it. */
-function inlineHtml(text: string): string {
+export function inlineHtml(text: string): string {
   let out = "";
   let last = 0;
 
   for (const m of text.matchAll(TOKEN)) {
     const at = m.index ?? 0;
-    if (at > last) out += escapeHtml(text.slice(last, at));
+    if (at > last) out += breaks(escapeHtml(text.slice(last, at)));
 
     if (m[1]) out += `<sup class="ref" data-ref="${m[1]}">${m[1]}</sup>`;
     else if (m[2] && m[3]) out += `<a href="${escapeHtml(m[3])}">${escapeHtml(m[2])}</a>`;
@@ -44,234 +39,281 @@ function inlineHtml(text: string): string {
     last = at + m[0].length;
   }
 
-  return out + escapeHtml(text.slice(last));
+  return out + breaks(escapeHtml(text.slice(last)));
 }
+
+/** A hard break inside a paragraph is a newline in the source and a <br> here. */
+const breaks = (html: string) => html.replace(/\n/g, "<br>");
 
 /* ---- the DOM, read back as source --------------------------------------- */
 
-type Scan = { out: string; done: boolean };
-type Stop = { node: Node; offset: number } | null;
+/** One run of text, with the three inline tokens put back the way they are
+ *  stored. Anything the browser invented along the way — a styled span, a bold
+ *  from a keyboard shortcut, a pasted class — is walked through and dropped:
+ *  what survives is what the format can hold. */
+function inlineOf(node: Node, skip?: (el: HTMLElement) => boolean): string {
+  let out = "";
 
-/** One walk serves both jobs: with no stop it serializes the whole region, and
- *  with one it measures how much source lies before a caret. */
-function scan(node: Node, stop: Stop, state: Scan) {
-  if (state.done) return;
-
-  if (node.nodeType === Node.TEXT_NODE) {
-    const text = node.nodeValue ?? "";
-    if (stop && node === stop.node) {
-      state.out += text.slice(0, stop.offset);
-      state.done = true;
-    } else {
-      state.out += text;
+  for (const child of Array.from(node.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      out += child.nodeValue ?? "";
+      continue;
     }
-    return;
-  }
+    if (!(child instanceof HTMLElement) || skip?.(child)) continue;
 
-  if (!(node instanceof HTMLElement)) return;
-
-  const tag = node.tagName;
-
-  if (tag === "BR") {
-    state.out += " ";
-    return;
-  }
-  if (tag === "SUP" && node.dataset.ref) {
-    state.out += `[^${node.dataset.ref}]`;
-    return;
-  }
-
-  /* A link and an emphasis are opened, walked into — the caret can be inside
-     them — and closed only if the walk did not stop on the way. */
-  if (tag === "A") {
-    state.out += "[";
-    children(node, stop, state);
-    if (!state.done) state.out += `](${node.getAttribute("href") ?? ""})`;
-    return;
-  }
-  if (tag === "EM" || tag === "I") {
-    state.out += "*";
-    children(node, stop, state);
-    if (!state.done) state.out += "*";
-    return;
-  }
-
-  children(node, stop, state);
-}
-
-function children(parent: Node, stop: Stop, state: Scan) {
-  const kids = Array.from(parent.childNodes);
-  const limit = stop && parent === stop.node ? stop.offset : kids.length;
-  for (let i = 0; i < limit && !state.done; i++) scan(kids[i], stop, state);
-  if (stop && parent === stop.node) state.done = true;
-}
-
-/** What a region holds, as source text. Non-breaking spaces are what a browser
- *  leaves behind when two spaces are typed; they are not content. */
-function readSource(root: HTMLElement): string {
-  const state: Scan = { out: "", done: false };
-  children(root, null, state);
-  return state.out.replace(/\u00a0/g, " ");
-}
-
-/** Where a DOM position falls in that source text. */
-function sourceOffset(root: HTMLElement, node: Node, offset: number): number {
-  const state: Scan = { out: "", done: false };
-  children(root, { node, offset }, state);
-  return state.out.length;
-}
-
-/** The selection inside a region, in source coordinates. */
-export function selectionIn(root: HTMLElement): { start: number; end: number } | null {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return null;
-
-  const range = selection.getRangeAt(0);
-  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
-
-  return {
-    start: sourceOffset(root, range.startContainer, range.startOffset),
-    end: sourceOffset(root, range.endContainer, range.endOffset),
-  };
-}
-
-/** The inverse: put the caret at a source offset. Offsets that land inside a
- *  token's punctuation settle on the nearest place a caret can actually go. */
-function placeCaret(root: HTMLElement, offset: number) {
-  let count = 0;
-  let target: Text | null = null;
-  let at = 0;
-
-  const walk = (parent: Node): boolean => {
-    for (const child of Array.from(parent.childNodes)) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        const length = (child.nodeValue ?? "").length;
-        if (count + length >= offset) {
-          target = child as Text;
-          at = offset - count;
-          return true;
-        }
-        count += length;
-        continue;
+    switch (child.tagName) {
+      case "BR":
+        out += "\n";
+        break;
+      case "SUP":
+        out += child.dataset.ref ? `[^${child.dataset.ref}]` : inlineOf(child, skip);
+        break;
+      case "A": {
+        const label = inlineOf(child, skip).trim();
+        const href = child.getAttribute("href") ?? "";
+        out += label && href ? `[${label}](${href})` : label;
+        break;
       }
-
-      if (!(child instanceof HTMLElement)) continue;
-
-      const tag = child.tagName;
-      if (tag === "SUP" && child.dataset.ref) {
-        count += child.dataset.ref.length + 3;
-        continue;
+      case "EM":
+      case "I": {
+        const inner = inlineOf(child, skip);
+        out += inner.trim() ? `*${inner.trim()}*` : inner;
+        break;
       }
-      if (tag === "A") {
-        count += 1;
-        if (walk(child)) return true;
-        count += 3 + (child.getAttribute("href") ?? "").length;
-        continue;
-      }
-      if (tag === "EM" || tag === "I") {
-        count += 1;
-        if (walk(child)) return true;
-        count += 1;
-        continue;
-      }
-      if (walk(child)) return true;
+      default:
+        out += inlineOf(child, skip);
     }
-    return false;
-  };
-
-  walk(root);
-
-  const range = document.createRange();
-  if (target) {
-    range.setStart(target, Math.min(at, (target as Text).length));
-  } else {
-    range.selectNodeContents(root);
-    range.collapse(false);
   }
-  range.collapse(true);
 
-  const selection = window.getSelection();
-  selection?.removeAllRanges();
-  selection?.addRange(range);
+  return out.replace(/ /g, " ");
 }
 
-/* ---- the region ---------------------------------------------------------- */
+/** A heading, a quote and a sidenote are one line of prose however they were
+ *  typed; only a paragraph keeps the breaks put in it on purpose. */
+const collapse = (text: string) => text.replace(/\s+/g, " ").trim();
+const keepBreaks = (text: string) =>
+  text
+    .split("\n")
+    .map((line) => line.replace(/[ \t ]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
 
-type Tag = "h2" | "p" | "span" | "figcaption";
+const isNote = (el: HTMLElement) => el.classList.contains("sn");
 
-type RegionProps = {
-  as: Tag;
-  className?: string;
-  /** The source text. Read on mount and never again: see the note above. */
-  source: string;
-  /** A title has no inline syntax, so it is typed and stored as it reads. */
-  plain?: boolean;
-  placeholder?: string;
-  /** Names the region for the formatting menu: "<block id>:<part>". */
-  region?: string;
-  /** Where to put the caret when this region mounts, in source offsets. */
-  caret?: number | null;
-  onChange: (source: string) => void;
-  onKeyDown?: (event: React.KeyboardEvent<HTMLElement>, el: HTMLElement) => void;
-  onFocus?: () => void;
-  /** An image pasted into the text. Handled by the editor, not by the region. */
-  onFiles?: (files: File[]) => void;
+/** What is written in the host, as blocks. */
+export function blocksFromDom(host: HTMLElement): Block[] {
+  const out: Block[] = [];
+
+  for (const el of Array.from(host.children)) {
+    if (!(el instanceof HTMLElement)) continue;
+
+    if (el.tagName === "FIGURE") {
+      const src = el.querySelector("img")?.getAttribute("src") ?? "";
+      const name = decodeURIComponent(src.replace(/^\/media\//, ""));
+      const caption = el.querySelector("figcaption");
+      if (name) out.push({ kind: "image", src: name, text: caption ? collapse(inlineOf(caption)) : "" });
+      continue;
+    }
+
+    if (/^H[1-6]$/.test(el.tagName)) {
+      const text = collapse(inlineOf(el));
+      if (text) out.push({ kind: "h2", text });
+      continue;
+    }
+
+    if (el.tagName === "BLOCKQUOTE") {
+      const parts = Array.from(el.children).filter((c): c is HTMLElement => c instanceof HTMLElement);
+      const source = parts.find((p) => p.classList.contains("src"));
+      const said = parts.filter((p) => p !== source);
+      const text = collapse(said.length ? said.map((p) => inlineOf(p)).join(" ") : inlineOf(el));
+      if (text) out.push({ kind: "quote", text, source: source ? collapse(inlineOf(source)) : "" });
+      continue;
+    }
+
+    /* A paragraph, or whatever the browser left behind that is standing in for
+       one. Its sidenote is a block of its own, straight after it, which is how
+       the format holds it and how <Prose> reads it back. */
+    const text = keepBreaks(inlineOf(el, isNote));
+    const note = Array.from(el.querySelectorAll<HTMLElement>(".sn"))[0];
+    if (text) out.push({ kind: "p", text });
+    if (note) {
+      const n = Number(note.querySelector(".n")?.textContent ?? "") || out.filter((b) => b.kind === "note").length + 1;
+      const said = collapse(inlineOf(note, (child) => child.classList.contains("n")));
+      if (said) out.push({ kind: "note", n, text: said });
+    }
+  }
+
+  return out;
+}
+
+/* ---- and written into it once ------------------------------------------- */
+
+const noteHtml = (block: Extract<Block, { kind: "note" }>) =>
+  `<span class="sn"><span class="n" contenteditable="false">${block.n}</span>${inlineHtml(block.text)}</span>`;
+
+export const figureHtml = (block: Extract<Block, { kind: "image" }>) => {
+  const size = imageSize(block.src);
+  const box = size ? ` width="${size.width}" height="${size.height}"` : "";
+  return (
+    `<figure contenteditable="false"><img src="${mediaUrl(block.src)}" alt="${escapeHtml(block.text)}"${box}>` +
+    `<figcaption contenteditable="true" data-placeholder="Caption">${inlineHtml(block.text)}</figcaption></figure>`
+  );
 };
 
+/** The blocks as the page draws them, which is the markup the host starts from
+ *  and the shape everything above reads back. A quote keeps its source line
+ *  even when empty, so there is somewhere to type one. */
+export function bodyHtml(blocks: Block[]): string {
+  let out = "";
+
+  blocks.forEach((block, i) => {
+    switch (block.kind) {
+      case "note":
+        break;
+      case "h2":
+        out += `<h2>${inlineHtml(block.text)}</h2>`;
+        break;
+      case "quote":
+        out += `<blockquote><p>${inlineHtml(block.text)}</p><p class="src">${inlineHtml(block.source)}</p></blockquote>`;
+        break;
+      case "image":
+        out += figureHtml(block);
+        break;
+      default: {
+        const next = blocks[i + 1];
+        const note = next?.kind === "note" ? noteHtml(next) : "";
+        out += `<p>${inlineHtml(block.text)}${note}</p>`;
+      }
+    }
+  });
+
+  return out || "<p><br></p>";
+}
+
+/* ---- the body ------------------------------------------------------------ */
+
+export function Body({
+  hostRef,
+  blocks,
+  onChange,
+  onFiles,
+}: {
+  /** The editor keeps it: every formatting action is a DOM edit in here. */
+  hostRef?: React.RefObject<HTMLDivElement | null>;
+  blocks: Block[];
+  onChange: (blocks: Block[]) => void;
+  onFiles: (files: File[]) => void;
+}) {
+  const own = useRef<HTMLDivElement>(null);
+  const host = hostRef ?? own;
+
+  /* Captured once, object and all. React compares this prop by identity, so a
+     fresh { __html } literal — even one holding the very same string — would
+     rewrite the host on every render and throw away whatever has just been
+     typed into it. */
+  const initial = useRef({ __html: bodyHtml(blocks) });
+
+  const read = () => host.current && onChange(blocksFromDom(host.current));
+
+  return (
+    <div
+      ref={host}
+      className="prose"
+      data-region="body"
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck
+      role="textbox"
+      aria-multiline="true"
+      aria-label="Body"
+      onInput={read}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        const dropped = images(event.dataTransfer.files);
+        if (dropped.length === 0) return;
+        event.preventDefault();
+        onFiles(dropped);
+      }}
+      onPaste={(event) => {
+        const pasted = images(event.clipboardData.files);
+        if (pasted.length > 0) {
+          event.preventDefault();
+          onFiles(pasted);
+          return;
+        }
+        /* Text, never somebody else's markup. execCommand keeps the browser's
+           own undo stack, which nothing here could rebuild. */
+        event.preventDefault();
+        document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+      }}
+      dangerouslySetInnerHTML={initial.current}
+    />
+  );
+}
+
+/* ---- and the single lines around it -------------------------------------- */
+
+/** A title, the line under it, a company's period: one run of plain text, with
+ *  no format to speak of. Same contract as the body — written once, read back
+ *  on input — and Enter is not a thing that happens in a line. */
 export function Region({
   as: Tag,
   className,
   source,
-  plain = false,
   placeholder,
   region,
-  caret = null,
+  focus = false,
   onChange,
-  onKeyDown,
   onFocus,
-  onFiles,
-}: RegionProps) {
+}: {
+  as: "span";
+  className?: string;
+  source: string;
+  placeholder?: string;
+  /** Names the region, for the suite and for anyone reading the DOM. */
+  region?: string;
+  focus?: boolean;
+  onChange: (source: string) => void;
+  onFocus?: () => void;
+}) {
   const el = useRef<HTMLElement>(null);
+  const initial = useRef({ __html: escapeHtml(source) });
 
-  /* Captured once, object and all. React compares this prop by identity, so a
-     fresh { __html } literal — even one holding the very same string — makes it
-     rewrite the element on every render, which wipes whatever has just been
-     typed into it and collapses any selection inside it. The whole mount-once
-     contract rests on this ref never being replaced. */
-  const initial = useRef({ __html: plain ? escapeHtml(source) : inlineHtml(source) });
-
-  useCaretEffect(() => {
-    if (caret === null || !el.current) return;
+  useEffect(() => {
+    if (!focus || !el.current) return;
     el.current.focus({ preventScroll: true });
-    placeCaret(el.current, caret);
-    /* Mount only: a remount is how a region is ever rewritten. */
+    const range = document.createRange();
+    range.selectNodeContents(el.current);
+    range.collapse(false);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    /* Mount only. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Tag
-      ref={el as any}
+      ref={el as React.RefObject<HTMLSpanElement>}
       className={className}
       data-region={region}
       contentEditable
       suppressContentEditableWarning
       spellCheck
       data-placeholder={placeholder}
-      onInput={(event) => onChange(readSource(event.currentTarget as HTMLElement))}
-      onKeyDown={(event) => onKeyDown?.(event, event.currentTarget as HTMLElement)}
+      onInput={(event: React.FormEvent<HTMLElement>) =>
+        onChange((event.currentTarget.textContent ?? "").replace(/ /g, " "))
+      }
       onFocus={() => onFocus?.()}
-      onPaste={(event) => {
-        /* An image on the clipboard is an image in the page. */
-        const files = images(event.clipboardData.files);
-        if (files.length > 0 && onFiles) {
-          event.preventDefault();
-          onFiles(files);
-          return;
-        }
-
-        /* Anything else arrives as text, never as somebody else's markup. */
+      onKeyDown={(event: React.KeyboardEvent) => event.key === "Enter" && event.preventDefault()}
+      onPaste={(event: React.ClipboardEvent) => {
         event.preventDefault();
-        const text = event.clipboardData.getData("text/plain").replace(/\s+/g, " ");
-        document.execCommand("insertText", false, text);
+        document.execCommand(
+          "insertText",
+          false,
+          event.clipboardData.getData("text/plain").replace(/\s+/g, " "),
+        );
       }}
       dangerouslySetInnerHTML={initial.current}
     />

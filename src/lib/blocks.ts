@@ -29,8 +29,17 @@ const NOTE = /^\[\^(\d+)\]:\s*/;
 const IMAGE = /^!\[(.*)\]\(([^)]+)\)$/;
 const SOURCE = /^—\s*/;
 
-/** Soft line breaks inside a block are typing artefacts, not content. */
+/** In a heading, a quote or a sidenote, a line break is a typing artefact and
+ *  is collapsed. In a paragraph it is a break somebody asked for: blocks are
+ *  separated by a blank line, so a single newline inside one is unambiguous,
+ *  and src/lib/inline.tsx draws it as a <br>. */
 const unwrap = (lines: string[]) => lines.join(" ").replace(/\s+/g, " ").trim();
+const keep = (lines: string[]) =>
+  lines
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter((line, i, all) => line || (i > 0 && i < all.length - 1))
+    .join("\n")
+    .trim();
 
 export function parseBody(body: string): Block[] {
   return body
@@ -66,7 +75,7 @@ export function parseBody(body: string): Block[] {
         };
       }
 
-      return { kind: "p", text: unwrap(lines) };
+      return { kind: "p", text: keep(lines) };
     });
 }
 

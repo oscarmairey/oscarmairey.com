@@ -48,7 +48,13 @@ export function inline(text: string): ReactNode[] {
   }
 
   if (last < text.length) out.push(text.slice(last));
-  return out;
+
+  /* A newline inside a block is a break somebody typed. */
+  return out.flatMap((part, i) =>
+    typeof part === "string" && part.includes("\n")
+      ? part.split("\n").flatMap((line, n) => (n === 0 ? [line] : [<br key={`b${i}-${n}`} />, line]))
+      : [part],
+  );
 }
 
 /** The same string with all markup removed, for feeds and meta descriptions. */
