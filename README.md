@@ -89,17 +89,25 @@ than show a stale copy of a post about to be overwritten.
 limited per client. Nothing under `/admin` is indexed: the pages are `noindex`,
 `robots.txt` disallows it, and the sitemap lists public routes only.
 
-One list view and one form serve all three labels: `/admin/notes`,
-`/admin/books`, `/admin/companies`, then `new` or the row's id under each. What
-a label does differently — its fields, its words, its route — is in
-`src/lib/labels.tsx`.
+One list and one page serve all three labels: `/admin/notes`, `/admin/books`,
+`/admin/companies`, then `new` or the row's id under each. What a label does
+differently — its fields, its words, its route — is in `src/lib/labels.tsx`.
+
+You edit the page itself. The editor mounts the same component the public route
+mounts and makes its text editable in place, so there is nothing to preview.
+Enter starts a paragraph, Backspace at the start of one joins it to the last,
+and a right click — or a selection, on a phone — offers heading, quote,
+sidenote, emphasis and link. No editor library: `src/app/admin/editable.tsx` is
+all of it.
+
+Slugs and reading times are never typed. Both are derived when you save; the
+slug follows the title until the entry is published and then stays put.
 
 Notes have a draft state and save themselves as you type; publishing is a
 deliberate press, and so is any edit to something already published. Books and
-companies are always live, so they save on a press. The Preview tab mounts the
-same page component the public route mounts, so it cannot drift from what ships.
+companies are always live, so they save on a press.
 
-Body text uses the same small format under every label:
+What is typed is stored in the same small format under every label:
 
 ```
 ## heading

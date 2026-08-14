@@ -24,6 +24,9 @@ write. A second, slower audience comes back for the notes.
   "Index" label on the home page.
 - Text is written by Oscar. An unpublished note is out of the site entirely: listings,
   sitemap and feed.
+- Nobody types a slug or a reading time. Both are derived on save, from the title and from
+  the body. The slug follows the title while an entry is a draft and freezes when it is
+  published: a published address never moves.
 - The author of a book is stored and edited, and never printed.
 
 ## Architecture
@@ -57,9 +60,21 @@ Bodies use a small block model (`p`, `h2`, `quote`, `note`) with a tiny inline f
 `src/lib/inline.tsx` supporting `[label](url)`, `*emphasis*` and `[^1]` note markers. No MDX
 toolchain. What is left in `src/content` — the bio, the links — still changes with a deploy.
 
-The editor at `/admin` is one password, one list view, one form: `/admin/[section]` for the
-list, `/admin/[section]/new` and `/admin/[section]/[id]` for the editor, all driven by the
-same label spec. Notes autosave as drafts; books and companies save on a press.
+The editor at `/admin` is one password and no chrome of its own. It sits inside the site's
+shell, on the site's column, under the site's masthead: there is no second navigation.
+`/admin/[section]` lists, `/admin/[section]/new` and `/admin/[section]/[id]` edit.
+
+Editing happens inside the page. The editor mounts the same `<Entry>` the public route
+mounts and hands it editable regions, so there is no form and no preview tab: the title, the
+line under it and every block of the body are typed where they will be read. A right click,
+or a selection on a touch screen, offers heading, quote, sidenote, emphasis and link.
+`src/app/admin/editable.tsx` is the whole of that machinery, dependency-free: it renders the
+inline tokens live, reads them back as source, and keeps the caret still by writing a
+region's content exactly once. The stored format never changes.
+
+What a reader never sees — a book's author, a company's period, a note's date, the order —
+is one quiet row under the page. Notes autosave as drafts; books and companies save on a
+press.
 
 ## Design system
 
