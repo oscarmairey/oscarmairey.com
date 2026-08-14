@@ -175,6 +175,23 @@ a.mast-name:hover {
   margin-top: 0.7rem;
   color: var(--ink-2);
 }
+
+/* The name and the line that belongs to it, running on as one piece of text:
+   the summary starts beside the name and wraps under it, filling the measure,
+   rather than dropping to a line of its own the moment it does not fit. Both
+   keep their own size and colour; only the flow is shared. */
+.title-line {
+  margin-top: 2.4rem;
+  line-height: 1.3;
+}
+.title-line .title,
+.title-line .sub {
+  display: inline;
+  margin-top: 0;
+}
+.title-line .sub {
+  margin-left: 0.5rem;
+}
 .stamp {
   margin-top: 0.7rem;
   font-size: var(--t-s);

@@ -36,6 +36,26 @@ export default function Entry({
   /* Every list is newest first, so the entry after this one in it is the one
      that came before this one in life. The ends of the chain simply have one
      neighbour. */
+  /* A company's summary belongs to its name here as well as in the lists: one
+     line, wrapping to two when there is no room. The name keeps its own text —
+     the two stay separate elements, side by side, rather than one heading with
+     a second sentence inside it. */
+  const heading = (title: ReactNode, sub: ReactNode) => {
+    const name = <h1 className="title">{title}</h1>;
+    const line = sub ? <p className="sub">{sub}</p> : null;
+    return spec.subBeside ? (
+      <div className="title-line">
+        {name}
+        {line}
+      </div>
+    ) : (
+      <>
+        {name}
+        {line}
+      </>
+    );
+  };
+
   const at = list.findIndex((one) => one.slug === item.slug);
   const before = at === -1 ? undefined : list[at + 1];
   const after = at < 1 ? undefined : list[at - 1];
@@ -45,8 +65,7 @@ export default function Entry({
   if (slots) {
     return (
       <article>
-        <h1 className="title">{slots.title}</h1>
-        <p className="sub">{slots.sub}</p>
+        {heading(slots.title, slots.sub)}
         {stamp && <p className="stamp">{stamp}</p>}
         <div className="prose">{slots.body}</div>
       </article>
@@ -56,8 +75,7 @@ export default function Entry({
   return (
     <>
       <article>
-        <h1 className="title">{item.title}</h1>
-        {blocks.length > 0 && item.subtitle && <p className="sub">{item.subtitle}</p>}
+        {heading(item.title, blocks.length > 0 && item.subtitle ? item.subtitle : null)}
         {stamp && <p className="stamp">{stamp}</p>}
 
         {blocks.length > 0 ? (
