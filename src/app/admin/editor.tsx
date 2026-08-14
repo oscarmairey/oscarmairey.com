@@ -306,12 +306,17 @@ export default function Editor({ initial, live }: Props) {
       setMenu(null);
     };
 
-    /* A menu opened over a selection is about that selection. Delete it, type
-       over it, or click it away and the menu has nothing left to answer. */
+    /* A menu opened over a selection lives as long as that selection does:
+       delete it, type over it, or move the caret out of the editor and there is
+       nothing left for the menu to answer. One opened on a caret by right click
+       is not about a selection and is not closed by the absence of one — it
+       would close itself the moment it opened. */
     const gone = () => {
       if (!menu.onText) return;
       const selection = window.getSelection();
-      if (!selection || selection.isCollapsed || selection.toString().trim() === "") setMenu(null);
+      const inside =
+        selection && selection.rangeCount > 0 && host.current?.contains(selection.anchorNode);
+      if (!inside || selection.isCollapsed || selection.toString().trim() === "") setMenu(null);
     };
 
     document.addEventListener("mousedown", close);
