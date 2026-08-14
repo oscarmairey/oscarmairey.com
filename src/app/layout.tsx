@@ -8,13 +8,19 @@ import { site } from "@/content/site";
 
 /** One family for the whole site: body, links, dates, headings, email.
  *  Literata carries an optical-size axis, so metadata at 14px and a title at
- *  34px are served by different cuts of the same face. */
+ *  34px are served by different cuts of the same face.
+ *
+ *  Naming weights would have asked for those cuts as static instances — three
+ *  weights against two styles, none of them carrying opsz, which left
+ *  `font-optical-sizing: auto` with nothing to size. Asking for the axis
+ *  instead ships the variable face, where the weights are a range and the
+ *  optical size follows the type. */
 const literata = Literata({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-reading",
-  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
+  axes: ["opsz"],
 });
 
 export const metadata: Metadata = {
