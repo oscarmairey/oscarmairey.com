@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return { title: isSection(section) ? sections[section].plural : "Editor" };
 }
 
-/** One list for the three labels: everything under it, in the order the site
- *  prints it, with whatever metadata that label carries on the right. */
+/** The same list the site prints, in the same classes, with drafts in it and
+ *  every title leading to the editor instead of the page. */
 export default async function SectionList({ params }: Params) {
   await requireSession();
 
@@ -27,35 +27,29 @@ export default async function SectionList({ params }: Params) {
 
   return (
     <>
-      <h1 className="adm-title">{spec.plural}</h1>
-      <p className="adm-hint">
-        {spec.ordered
-          ? "In the order the site shows them. Lower numbers come first."
-          : "Newest first. A draft is invisible to everyone but you."}
-      </p>
+      <h1 className="vh">{spec.plural}</h1>
 
-      <section className="adm-section">
-        <ul className="adm-list">
+      <section className="section">
+        <ul className="rows">
           {rows.map((row) => {
             const draft = spec.draftable && !row.published;
             return (
               <li key={row.id}>
-                <p className="adm-row">
-                  <Link className="adm-name" href={`/admin/${section}/${row.id}`}>
+                <p className="line">
+                  <Link className="t" href={`/admin/${section}/${row.id}`}>
                     {row.title || "Untitled"}
                   </Link>
-                  <span className={draft ? "adm-state" : "adm-state live"}>
+                  <span className="when">
                     {draft ? "Draft" : spec.meta(row).text || `#${row.sortOrder}`}
                   </span>
                 </p>
-                {row.subtitle && <p className="adm-sub">{row.subtitle}</p>}
+                {row.subtitle && <p className="note">{row.subtitle}</p>}
               </li>
             );
           })}
         </ul>
-        {rows.length === 0 && <p className="adm-empty">Nothing here yet.</p>}
 
-        <div className="adm-buttons" style={{ marginTop: "1.6rem" }}>
+        <div className="adm-buttons">
           <Link className="adm-btn primary" href={`/admin/${section}/new`}>
             New {spec.one}
           </Link>

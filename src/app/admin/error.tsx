@@ -6,13 +6,13 @@
 export default function AdminError({ reset }: { error: Error; reset: () => void }) {
   return (
     <>
-      <h1 className="adm-title">The database did not answer</h1>
-      <p className="adm-hint">
+      <h1 className="title">The database did not answer</h1>
+      <p className="sub">
         Nothing was lost, and the public site is still up: it serves the last content it read.
         The editor needs Postgres, so try again, and if it keeps failing check that the{" "}
         <code>xtrapoll-db-1</code> container is running.
       </p>
-      <div className="adm-buttons" style={{ marginTop: "1.6rem" }}>
+      <div className="adm-buttons">
         <button className="adm-btn primary" type="button" onClick={reset}>
           Try again
         </button>

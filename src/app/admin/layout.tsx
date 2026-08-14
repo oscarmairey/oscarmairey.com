@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./admin.css";
-import { signedIn } from "@/lib/auth";
-import { sectionList } from "@/lib/labels";
-import { signOut } from "./actions";
 
-/** Nothing under /admin is ever indexed: this header, a Disallow in robots.ts,
+/** The editor sits inside the site's own shell: the masthead above it is the
+ *  site's, the column is the site's, and there is no second navigation. What
+ *  the editor adds is one stylesheet.
+ *
+ *  Nothing under /admin is ever indexed: this header, a Disallow in robots.ts,
  *  and the sitemap listing public routes only. */
 export const metadata: Metadata = {
   title: { default: "Editor", template: "%s · Editor" },
@@ -17,32 +17,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const authed = await signedIn();
-
-  return (
-    <div className="adm">
-      {authed && (
-        <header className="adm-bar">
-          <Link className="adm-here" href="/admin">
-            Editor
-          </Link>
-          <nav aria-label="Editor">
-            {sectionList.map((spec) => (
-              <Link key={spec.section} href={`/admin/${spec.section}`}>
-                {spec.plural}
-              </Link>
-            ))}
-            <Link href="/">Site</Link>
-            <form action={signOut}>
-              <button className="adm-btn quiet" type="submit">
-                Sign out
-              </button>
-            </form>
-          </nav>
-        </header>
-      )}
-      <main>{children}</main>
-    </div>
-  );
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <div className="adm">{children}</div>;
 }
