@@ -260,11 +260,34 @@ a.t:focus-visible {
   color: var(--ink-2);
 }
 /* Beside the name rather than under it: short enough to belong to it, quiet
-   enough not to be mistaken for it. Wraps under the name when the room runs
-   out, because .line wraps. */
+   enough not to be mistaken for it. */
 .note.beside {
   margin-top: 0;
   margin-left: 0.55rem;
+}
+
+/* A row whose left side is a sentence: the name and its summary run on and wrap
+   inside their own column, and the date keeps the right edge rather than being
+   pushed onto a line of its own the moment the sentence is long. Narrow enough
+   and the date does drop below — still on the right, so the eye finds every
+   date in one column whatever the width. */
+.line.split {
+  flex-wrap: nowrap;
+}
+.line.split > span:first-child {
+  min-width: 0;
+}
+.line.split .when {
+  flex: none;
+}
+
+@media (max-width: 30rem) {
+  .line.split {
+    flex-wrap: wrap;
+  }
+  .line.split .when {
+    margin-left: auto;
+  }
 }
 
 /* ---- what came before this, and what came after ------------------ */

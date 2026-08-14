@@ -26,7 +26,7 @@ export default function Entries({
         const meta = spec.meta(item);
         return (
           <li key={item.slug}>
-            <p className="line">
+            <p className={spec.subBeside ? "line split" : "line"}>
               <span>
                 <Link className="t" href={`${spec.route}/${item.slug}`}>
                   {item.title}
