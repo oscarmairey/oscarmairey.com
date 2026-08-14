@@ -7,7 +7,7 @@ import Entry from "@/components/site/entry";
 import { parseBody, readingTime, serializeBlocks, type Block } from "@/lib/blocks";
 import { formatDay } from "@/lib/format";
 import { itemOf, sections, type Draft, type EditField } from "@/lib/labels";
-import { ACCEPT, imageSize, mediaUrl } from "@/lib/media";
+import { ACCEPT, imageSize, mediaUrl, prepare } from "@/lib/media";
 import { deleteItem, saveItem, setItemPublished } from "./actions";
 import { Region, selectionIn } from "./editable";
 
@@ -334,19 +334,6 @@ export default function Editor({ initial, live }: Props) {
 
   /* ---- images ------------------------------------------------------------- */
 
-  /** The size the file already knows about itself. It ends up in the stored
-   *  name, so the page can reserve the box before the bytes arrive. */
-  async function measure(file: File) {
-    try {
-      const bitmap = await createImageBitmap(file);
-      const size = { width: bitmap.width, height: bitmap.height };
-      bitmap.close();
-      return size;
-    } catch {
-      return null;
-    }
-  }
-
   function place(src: string) {
     const after = Math.min(active.current, rows.length - 1);
     const image: Row = { id: seed.current.n++, v: 0, block: { kind: "image", src, text: "" } };
@@ -365,9 +352,12 @@ export default function Editor({ initial, live }: Props) {
     setBusy(true);
     setError("");
     try {
+      /* Shrunk here, in the browser that already has it open, so what lands on
+         disk is what a reader should be asked to download. */
+      const { file: sending, size } = await prepare(file);
+
       const form = new FormData();
-      form.set("file", file);
-      const size = await measure(file);
+      form.set("file", sending);
       if (size) {
         form.set("width", String(size.width));
         form.set("height", String(size.height));
