@@ -22,13 +22,13 @@ write. A second, slower audience comes back for the notes.
   photograph, no "last updated" line, nothing that has to be kept true by hand.
 - No decorative metadata. No "Founder / Dubai / Building since 2021" tag line, ever. No
   "Index" label on the home page.
-- Text is written by Oscar. An unpublished note is out of the site entirely: listings,
-  sitemap and feed.
+- Text is written by Oscar. An unpublished entry is out of the site entirely, whatever its
+  label: listings, sitemap, feed and its own address.
 - Nobody types a slug, a reading time or an order. All three are derived: from the title,
-  from the body, and from when a thing was made. The slug follows the title while an entry is a draft and freezes when it is
-  published: a published address never moves.
-- The author of a book is stored, and edited under the title in the editor, and never
-  printed: not in a list, not on its page, nowhere a reader can reach.
+  from the body, and from when a thing was made. The slug follows the title while an entry
+  is a draft and freezes at its first publish: a published address never moves.
+- A book is a title, its author and the one sentence that says why it stayed. Never a
+  summary of the book.
 
 ## Architecture
 
@@ -49,9 +49,9 @@ editor. Adding a fourth label is a row in `src/lib/labels.tsx` and three files.
 Everything the site lists lives in one Postgres table, `writings`, with a `label` column
 constrained to `note`, `book` or `company`. The columns are flat: `title`, `subtitle` (the
 one line the lists print), `byline` (a book's author, a company's role), `body`, `period`,
-`reading_time`, `published`, `published_at`, `created_at`. Only a note is ever a draft; a
-book and a company are written published. `year` and `url` are still in the table and are
-read by nothing: a book's year and a company's link left the site, and their data stayed.
+`reading_time`, `published`, `published_at`, `created_at`. Everything starts as a draft,
+whatever its label, and is published by a press. `year` and `url` are still in the table and
+are read by nothing: a book's year and a company's link left the site, and their data stayed.
 
 Nothing is ordered by hand. A list is newest first: a note by the day it was published,
 everything else by the day it was made.
@@ -80,11 +80,11 @@ or a selection on a touch screen, offers heading, quote, sidenote, emphasis and 
 inline tokens live, reads them back as source, and keeps the caret still by writing a
 region's content exactly once. The stored format never changes.
 
-Whatever the page prints is typed on the page. A company's period and role are the stamp
-under its name; a note's date is picked in the stamp where it is read. There is no metadata
-row anywhere, and no field that is not part of the page — with one exception: a book's
-author sits under its title **in the editor only**, because it is stored and never printed.
-Notes autosave as drafts; books and companies save on a press.
+Whatever the page prints is typed on the page, in the place it prints. A company's period
+and role are the stamp under its name, a book's author is the stamp under its title, and a
+note's date is picked in the stamp where it is read. There is no metadata row anywhere and
+no field that is not part of the page. A draft saves itself as it is typed; anything a
+reader can already reach saves on a deliberate press, and so does publishing it.
 
 ## Design system
 

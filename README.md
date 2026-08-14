@@ -114,11 +114,12 @@ it.
 
 Slugs and reading times are never typed, and neither is an order. The slug and
 the reading time are derived when you save — the slug follows the title until
-the entry is published and then stays put — and a list is simply newest first.
+the entry is first published and then stays put — and a list is simply newest first.
 
-Notes have a draft state and save themselves as you type; publishing is a
-deliberate press, and so is any edit to something already published. Books and
-companies are always live, so they save on a press.
+Everything is a draft first, whatever its label: invisible to everyone else,
+saving itself as you type. Publishing is a deliberate press, and so is any edit
+to something already published. Unpublishing takes it back off the site without
+losing it.
 
 What is typed is stored in the same small format under every label:
 
