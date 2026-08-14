@@ -125,11 +125,11 @@ export const sections: Record<Section, Spec> = {
     name: "Title",
     sub: "Why it stayed. One personal sentence, never a summary of the book.",
     draftable: false,
-    /* A book is a title and a reason. Nothing else earned a place on the page.
-       The author is stored, and shown to nobody: it appears under the title in
-       the editor, where Oscar sets it, and the reader never meets it. */
-    meta: () => ({ text: "" }),
-    stamp: (_item, edit) => edit?.({ key: "byline", label: "Author" }) ?? null,
+    /* A book is a title, whoever wrote it, and the reason it stayed. The author
+       reads where every list keeps its metadata, and under the title on the
+       page, which is the same place it is typed. */
+    meta: (item) => ({ text: item.byline }),
+    stamp: (item, edit) => edit?.({ key: "byline", label: "Author" }) ?? item.byline,
   },
 
   companies: {
