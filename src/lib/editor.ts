@@ -1,100 +1,100 @@
-import { query, queryOne } from "@/lib/db";
 import { invalidateContent } from "@/lib/content";
+import { query, queryOne } from "@/lib/db";
+import type { Draft, Label, Row } from "@/lib/labels";
+import { sections } from "@/lib/labels";
 
 /** Everything /admin reads and writes. Unlike src/lib/content.ts these throw:
  *  the editor must say plainly that the database is down rather than quietly
- *  show an old copy of a post that is about to be overwritten. */
+ *  show an old copy of a post that is about to be overwritten.
+ *
+ *  One table, so one set of functions. What a label does differently is in
+ *  src/lib/labels.tsx, not here. */
 
-export type WritingRow = {
-  id: number;
-  slug: string;
-  title: string;
-  subtitle: string;
-  body: string;
-  readingTime: string;
-  published: boolean;
-  /** ISO day in UTC, or "" when the post has never been dated. */
-  date: string;
-};
-
-export type BookRow = {
-  id: number;
-  title: string;
-  author: string;
-  year: string;
-  note: string;
-  sortOrder: number;
-};
-
-export type WritingInput = {
-  slug: string;
-  title: string;
-  subtitle: string;
-  body: string;
-  readingTime: string;
-  date: string;
-};
-
-export type CompanyRow = {
-  id: number;
-  slug: string;
-  name: string;
-  role: string;
-  period: string;
-  summary: string;
-  body: string;
-  url: string;
-  sortOrder: number;
-};
-
-export type CompanyInput = Omit<CompanyRow, "id">;
-
-const WRITING_COLUMNS = `
+const COLUMNS = `
   id::int AS id,
+  label,
   slug,
   title,
   subtitle,
+  byline,
   body,
+  year,
+  period,
+  url,
   reading_time AS "readingTime",
   published,
-  COALESCE(to_char(published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '') AS date
+  COALESCE(to_char(published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '') AS date,
+  sort_order AS "sortOrder"
 `;
 
-export function listWritings(): Promise<WritingRow[]> {
-  return query<WritingRow>(`
-    SELECT ${WRITING_COLUMNS}
+const orderFor = (label: Label) =>
+  label === "note" ? "COALESCE(published_at, updated_at) DESC, id DESC" : "sort_order, created_at, id";
+
+export function listItems(label: Label): Promise<Row[]> {
+  return query<Row>(
+    `SELECT ${COLUMNS} FROM writings WHERE label = $1 ORDER BY ${orderFor(label)}`,
+    [label],
+  );
+}
+
+export function getItem(label: Label, id: number): Promise<Row | undefined> {
+  return queryOne<Row>(`SELECT ${COLUMNS} FROM writings WHERE label = $1 AND id = $2`, [label, id]);
+}
+
+export function counts(): Promise<{ label: Label; total: number; live: number }[]> {
+  return query<{ label: Label; total: number; live: number }>(`
+    SELECT label,
+           count(*)::int AS total,
+           count(*) FILTER (WHERE published)::int AS live
     FROM writings
-    ORDER BY COALESCE(published_at, updated_at) DESC, id DESC
+    GROUP BY label
   `);
 }
 
-export function getWriting(id: number): Promise<WritingRow | undefined> {
-  return queryOne<WritingRow>(`SELECT ${WRITING_COLUMNS} FROM writings WHERE id = $1`, [id]);
-}
+const values = (draft: Draft) => [
+  sections[draft.section].label,
+  draft.slug,
+  draft.title,
+  draft.subtitle,
+  draft.byline,
+  draft.body,
+  draft.year,
+  draft.period,
+  draft.url,
+  draft.readingTime,
+  draft.date,
+  draft.sortOrder,
+];
 
-export async function createWriting(input: WritingInput): Promise<number> {
+/** A label that has no draft state is written published: a book or a company is
+ *  on the site the moment it exists, and there is nothing to stage. */
+export async function createItem(draft: Draft): Promise<number> {
   const row = await queryOne<{ id: number }>(
-    `INSERT INTO writings (slug, title, subtitle, body, reading_time, published_at)
-     VALUES ($1, $2, $3, $4, $5, NULLIF($6, '')::timestamptz)
+    `INSERT INTO writings
+       (label, slug, title, subtitle, byline, body, year, period, url, reading_time,
+        published_at, sort_order, published)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11, '')::timestamptz, $12, $1 <> 'note')
      RETURNING id::int AS id`,
-    [input.slug, input.title, input.subtitle, input.body, input.readingTime, input.date],
+    values(draft),
   );
   invalidateContent();
   return row!.id;
 }
 
-export async function updateWriting(id: number, input: WritingInput): Promise<void> {
+export async function updateItem(id: number, draft: Draft): Promise<void> {
+  const [label, ...rest] = values(draft);
   await query(
     `UPDATE writings
-     SET slug = $2, title = $3, subtitle = $4, body = $5, reading_time = $6,
-         published_at = NULLIF($7, '')::timestamptz, updated_at = now()
-     WHERE id = $1`,
-    [id, input.slug, input.title, input.subtitle, input.body, input.readingTime, input.date],
+     SET slug = $1, title = $2, subtitle = $3, byline = $4, body = $5, year = $6,
+         period = $7, url = $8, reading_time = $9,
+         published_at = NULLIF($10, '')::timestamptz, sort_order = $11, updated_at = now()
+     WHERE id = $12 AND label = $13`,
+    [...rest, id, label],
   );
   invalidateContent();
 }
 
-/** Publishing dates the post if it has never been dated, and leaves the date
+/** Publishing dates a note if it has never been dated, and leaves the date
  *  alone otherwise, so unpublishing and republishing does not move it. */
 export async function setPublished(id: number, published: boolean): Promise<void> {
   await query(
@@ -108,125 +108,17 @@ export async function setPublished(id: number, published: boolean): Promise<void
   invalidateContent();
 }
 
-export async function deleteWriting(id: number): Promise<void> {
-  await query("DELETE FROM writings WHERE id = $1", [id]);
+export async function deleteItem(label: Label, id: number): Promise<void> {
+  await query("DELETE FROM writings WHERE label = $1 AND id = $2", [label, id]);
   invalidateContent();
 }
 
-export function listBooks(): Promise<BookRow[]> {
-  return query<BookRow>(`
-    SELECT id::int AS id, title, author, COALESCE(year_read, '') AS year, note,
-           sort_order AS "sortOrder"
-    FROM books
-    ORDER BY sort_order, created_at, id
-  `);
-}
-
-export async function createBook(input: Omit<BookRow, "id" | "sortOrder">): Promise<void> {
-  await query(
-    `INSERT INTO books (title, author, year_read, note, sort_order)
-     VALUES ($1, $2, NULLIF($3, ''), $4,
-             COALESCE((SELECT MAX(sort_order) + 1 FROM books), 1))`,
-    [input.title, input.author, input.year, input.note],
-  );
-  invalidateContent();
-}
-
-export async function updateBook(id: number, input: Omit<BookRow, "id">): Promise<void> {
-  await query(
-    `UPDATE books
-     SET title = $2, author = $3, year_read = NULLIF($4, ''), note = $5,
-         sort_order = $6, updated_at = now()
-     WHERE id = $1`,
-    [id, input.title, input.author, input.year, input.note, input.sortOrder],
-  );
-  invalidateContent();
-}
-
-export async function deleteBook(id: number): Promise<void> {
-  await query("DELETE FROM books WHERE id = $1", [id]);
-  invalidateContent();
-}
-
-/* ---- companies ---------------------------------------------------------- */
-
-/** A company has no draft state: the record is either right or being corrected,
- *  and there is nothing to stage. So there is no publish here, only a save. */
-const COMPANY_COLUMNS = `
-  id::int AS id,
-  slug,
-  name,
-  role,
-  period,
-  summary,
-  body,
-  COALESCE(url, '') AS url,
-  sort_order AS "sortOrder"
-`;
-
-export function listCompanies(): Promise<CompanyRow[]> {
-  return query<CompanyRow>(`
-    SELECT ${COMPANY_COLUMNS}
-    FROM companies
-    ORDER BY sort_order, id
-  `);
-}
-
-export function getCompany(id: number): Promise<CompanyRow | undefined> {
-  return queryOne<CompanyRow>(`SELECT ${COMPANY_COLUMNS} FROM companies WHERE id = $1`, [id]);
-}
-
-export async function createCompany(input: CompanyInput): Promise<number> {
-  const row = await queryOne<{ id: number }>(
-    `INSERT INTO companies (slug, name, role, period, summary, body, url, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), $8)
-     RETURNING id::int AS id`,
-    [
-      input.slug,
-      input.name,
-      input.role,
-      input.period,
-      input.summary,
-      input.body,
-      input.url,
-      input.sortOrder,
-    ],
-  );
-  invalidateContent();
-  return row!.id;
-}
-
-export async function updateCompany(id: number, input: CompanyInput): Promise<void> {
-  await query(
-    `UPDATE companies
-     SET slug = $2, name = $3, role = $4, period = $5, summary = $6, body = $7,
-         url = NULLIF($8, ''), sort_order = $9, updated_at = now()
-     WHERE id = $1`,
-    [
-      id,
-      input.slug,
-      input.name,
-      input.role,
-      input.period,
-      input.summary,
-      input.body,
-      input.url,
-      input.sortOrder,
-    ],
-  );
-  invalidateContent();
-}
-
-export async function deleteCompany(id: number): Promise<void> {
-  await query("DELETE FROM companies WHERE id = $1", [id]);
-  invalidateContent();
-}
-
-/** The next place in the record, so a new company lands at the end rather than
+/** The next place in an ordered list, so a new row lands at the end rather than
  *  silently tying with the first. */
-export async function nextCompanyOrder(): Promise<number> {
+export async function nextOrder(label: Label): Promise<number> {
   const row = await queryOne<{ next: number }>(
-    "SELECT COALESCE(MAX(sort_order) + 1, 0)::int AS next FROM companies",
+    "SELECT COALESCE(MAX(sort_order) + 1, 0)::int AS next FROM writings WHERE label = $1",
+    [label],
   );
   return row?.next ?? 0;
 }
