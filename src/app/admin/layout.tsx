@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./admin.css";
 import { signedIn } from "@/lib/auth";
+import { sectionList } from "@/lib/labels";
 import { signOut } from "./actions";
 
 /** Nothing under /admin is ever indexed: this header, a Disallow in robots.ts,
@@ -27,9 +28,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Editor
           </Link>
           <nav aria-label="Editor">
-            <Link href="/admin">Writings</Link>
-            <Link href="/admin/books">Books</Link>
-            <Link href="/admin/companies">Companies</Link>
+            {sectionList.map((spec) => (
+              <Link key={spec.section} href={`/admin/${spec.section}`}>
+                {spec.plural}
+              </Link>
+            ))}
             <Link href="/">Site</Link>
             <form action={signOut}>
               <button className="adm-btn quiet" type="submit">

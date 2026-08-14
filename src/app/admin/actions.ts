@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { client, endSession, requireSession, startSession, verifyPassword } from "@/lib/auth";
 import { slugify } from "@/lib/blocks";
 import * as store from "@/lib/editor";
+import { isSection, sections, type Draft, type Section } from "@/lib/labels";
 import { clear, hit } from "@/lib/ratelimit";
 
 /** The public pages render dynamically and read through the cache in
@@ -51,58 +52,77 @@ export async function signOut() {
   redirect("/admin/login");
 }
 
-/* ---- writings ----------------------------------------------------------- */
-
-export type Draft = {
-  id: number | null;
-  title: string;
-  subtitle: string;
-  slug: string;
-  body: string;
-  readingTime: string;
-  date: string;
-};
+/* ---- one editor, three labels ------------------------------------------- */
 
 export type SaveResult = { ok: true; id: number; slug: string } | { ok: false; error: string };
 
-export async function saveWriting(draft: Draft): Promise<SaveResult> {
+/** A server action is a public endpoint, so the section arrives as a string
+ *  from the network and is checked here rather than trusted. */
+function asSection(value: string): Section | null {
+  return isSection(value) ? value : null;
+}
+
+export async function saveItem(draft: Draft): Promise<SaveResult> {
   await requireSession();
+
+  const section = asSection(draft.section);
+  if (!section) return { ok: false, error: "Unknown kind of entry." };
+  const spec = sections[section];
 
   const title = draft.title.trim();
   const slug = slugify(draft.slug.trim() || title);
-  if (!slug) return { ok: false, error: "Give it a title, or a slug, before saving." };
+  if (!slug) {
+    return { ok: false, error: `Give it a ${spec.name.toLowerCase()}, or a slug, before saving.` };
+  }
 
-  const input: store.WritingInput = {
+  const input: Draft = {
+    ...draft,
+    section,
     slug,
     title: title || "Untitled",
     subtitle: draft.subtitle.trim(),
-    body: draft.body,
+    byline: draft.byline.trim(),
+    year: draft.year.trim(),
+    period: draft.period.trim(),
+    url: draft.url.trim(),
     readingTime: draft.readingTime.trim(),
     date: DATE.test(draft.date) ? draft.date : "",
+    sortOrder: Number.isFinite(draft.sortOrder) ? Math.trunc(draft.sortOrder) : 0,
   };
 
   try {
     let id = draft.id;
     if (id === null) {
-      id = await store.createWriting(input);
+      id = await store.createItem(input);
     } else {
-      await store.updateWriting(id, input);
+      await store.updateItem(id, input);
     }
     published();
     return { ok: true, id, slug };
   } catch (error) {
     if (store.isSlugTaken(error)) {
-      return { ok: false, error: `The slug “${slug}” already belongs to another writing.` };
+      return { ok: false, error: `The slug “${slug}” already belongs to another ${spec.one}.` };
     }
     return { ok: false, error: message(error) };
   }
 }
 
-export async function setWritingPublished(id: number, publish: boolean): Promise<SaveResult> {
+/** Notes only: nothing else has a draft state to leave. */
+export async function setItemPublished(
+  section: string,
+  id: number,
+  publish: boolean,
+): Promise<SaveResult> {
   await requireSession();
+
+  const target = asSection(section);
+  if (!target || !sections[target].draftable) {
+    return { ok: false, error: "That kind of entry has no draft state." };
+  }
+
   try {
     await store.setPublished(id, publish);
-    const row = await store.getWriting(id);
+    const row = await store.getItem(sections[target].label, id);
     published();
     return { ok: true, id, slug: row?.slug ?? "" };
   } catch (error) {
@@ -110,104 +130,14 @@ export async function setWritingPublished(id: number, publish: boolean): Promise
   }
 }
 
-export async function deleteWriting(id: number) {
+export async function deleteItem(section: string, id: number) {
   await requireSession();
-  await store.deleteWriting(id);
+
+  const target = asSection(section);
+  if (!target) return;
+
+  await store.deleteItem(sections[target].label, id);
   published();
-  redirect("/admin");
-}
-
-/* ---- companies ---------------------------------------------------------- */
-
-export type CompanyDraft = {
-  id: number | null;
-  slug: string;
-  name: string;
-  role: string;
-  period: string;
-  summary: string;
-  body: string;
-  url: string;
-  sortOrder: number;
-};
-
-export async function saveCompany(draft: CompanyDraft): Promise<SaveResult> {
-  await requireSession();
-
-  const name = draft.name.trim();
-  const slug = slugify(draft.slug.trim() || name);
-  if (!slug) return { ok: false, error: "Give it a name, or a slug, before saving." };
-
-  const input: store.CompanyInput = {
-    slug,
-    name: name || "Untitled",
-    role: draft.role.trim(),
-    period: draft.period.trim(),
-    summary: draft.summary.trim(),
-    body: draft.body,
-    url: draft.url.trim(),
-    sortOrder: Number.isFinite(draft.sortOrder) ? Math.trunc(draft.sortOrder) : 0,
-  };
-
-  try {
-    let id = draft.id;
-    if (id === null) {
-      id = await store.createCompany(input);
-    } else {
-      await store.updateCompany(id, input);
-    }
-    published();
-    return { ok: true, id, slug };
-  } catch (error) {
-    if (store.isSlugTaken(error)) {
-      return { ok: false, error: `The slug “${slug}” already belongs to another company.` };
-    }
-    return { ok: false, error: message(error) };
-  }
-}
-
-export async function deleteCompany(id: number) {
-  await requireSession();
-  await store.deleteCompany(id);
-  published();
-  redirect("/admin/companies");
-}
-
-/* ---- books -------------------------------------------------------------- */
-
-const text = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
-
-export async function addBook(form: FormData) {
-  await requireSession();
-  const title = text(form, "title");
-  if (!title) return;
-
-  await store.createBook({
-    title,
-    author: text(form, "author"),
-    year: text(form, "year"),
-    note: text(form, "note"),
-  });
-  published();
-  revalidatePath("/admin/books");
-}
-
-export async function saveBook(id: number, form: FormData) {
-  await requireSession();
-  await store.updateBook(id, {
-    title: text(form, "title"),
-    author: text(form, "author"),
-    year: text(form, "year"),
-    note: text(form, "note"),
-    sortOrder: Number(text(form, "sortOrder")) || 0,
-  });
-  published();
-  revalidatePath("/admin/books");
-}
-
-export async function deleteBook(id: number) {
-  await requireSession();
-  await store.deleteBook(id);
-  published();
-  revalidatePath("/admin/books");
+  revalidatePath(`/admin/${target}`);
+  redirect(`/admin/${target}`);
 }
