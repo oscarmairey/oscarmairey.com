@@ -11,10 +11,19 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3100
+      - UPLOADS_DIR=/app/uploads
+    # Images uploaded through the editor. public/ is baked into the image at
+    # build time, so anything written there would be thrown away by the next
+    # deploy; this outlives them.
+    volumes:
+      - uploads:/app/uploads
     networks:
       - default
       - postgres
     restart: unless-stopped
+
+volumes:
+  uploads:
 
 networks:
   # Postgres lives in the xtrapoll stack and publishes only to the host's

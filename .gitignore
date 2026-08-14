@@ -20,6 +20,9 @@
 # production
 /build
 
+# images uploaded through the editor
+/uploads
+
 # misc
 .DS_Store
 *.pem

@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { client, requireSession, startSession, verifyPassword } from "@/lib/auth";
-import { readingTime, slugify } from "@/lib/blocks";
+import { imageNames, readingTime, slugify } from "@/lib/blocks";
 import * as store from "@/lib/editor";
 import { isSection, sections, type Draft, type Section } from "@/lib/labels";
 import { clear, hit } from "@/lib/ratelimit";
+import { forget } from "@/lib/uploads";
 
 /** The public pages render dynamically and read through the cache in
  *  src/lib/content.ts, which every write already invalidates. This clears the
@@ -17,6 +18,21 @@ function published() {
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** An entry that stops mentioning an image takes the file with it, unless some
+ *  other entry still refers to it. Called after the write, so the database is
+ *  already telling the truth, and never allowed to fail: an orphaned file is a
+ *  smaller problem than a save that did not happen. */
+async function sweep(before: string, after: string) {
+  try {
+    const dropped = imageNames(before).filter((name) => !imageNames(after).includes(name));
+    for (const name of dropped) {
+      if (!(await store.bodyUses(name))) await forget(name);
+    }
+  } catch (error) {
+    console.error(`[media] could not sweep: ${(error as Error).message}`);
+  }
+}
 
 function message(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
@@ -93,6 +109,7 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
     const id = draft.id === null ? await store.createItem(input) : draft.id;
     if (draft.id !== null) await store.updateItem(id, input);
 
+    if (current) await sweep(current.body, input.body);
     published();
     return { ok: true, id, slug };
   } catch (error) {
@@ -132,7 +149,9 @@ export async function deleteItem(section: string, id: number) {
   const target = asSection(section);
   if (!target) return;
 
+  const going = await store.getItem(sections[target].label, id);
   await store.deleteItem(sections[target].label, id);
+  if (going) await sweep(going.body, "");
   published();
   revalidatePath(`/admin/${target}`);
   redirect(`/admin/${target}`);

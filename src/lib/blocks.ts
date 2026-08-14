@@ -8,6 +8,7 @@
  *    > Quoted sentence    pull quote; a closing `> — Source` line names it
  *    > — Source
  *    [^1]: Note text      sidenote, floated beside the paragraph carrying [^1]
+ *    ![Caption](name.png) an uploaded image, served from /media
  *    anything else        paragraph
  *
  *  Inline syntax inside any block — [label](url), *emphasis*, [^1] — is handled
@@ -20,9 +21,12 @@ export type Block =
   | { kind: "p"; text: string }
   | { kind: "h2"; text: string }
   | { kind: "quote"; text: string; source: string }
-  | { kind: "note"; n: number; text: string };
+  | { kind: "note"; n: number; text: string }
+  /** `src` is the stored file name; `text` is the caption, and the alt text. */
+  | { kind: "image"; src: string; text: string };
 
 const NOTE = /^\[\^(\d+)\]:\s*/;
+const IMAGE = /^!\[(.*)\]\(([^)]+)\)$/;
 const SOURCE = /^—\s*/;
 
 /** Soft line breaks inside a block are typing artefacts, not content. */
@@ -36,6 +40,9 @@ export function parseBody(body: string): Block[] {
     .filter(Boolean)
     .map((chunk): Block => {
       const lines = chunk.split("\n");
+
+      const image = unwrap(lines).match(IMAGE);
+      if (image) return { kind: "image", src: image[2].trim(), text: image[1].trim() };
 
       if (lines[0].startsWith("## ")) {
         return { kind: "h2", text: unwrap([lines[0].slice(3), ...lines.slice(1)]) };
@@ -75,11 +82,19 @@ export function serializeBlocks(blocks: Block[]): string {
           return block.source ? `> ${block.text}\n> — ${block.source}` : `> ${block.text}`;
         case "note":
           return `[^${block.n}]: ${block.text}`;
+        case "image":
+          return `![${block.text}](${block.src})`;
         default:
           return block.text;
       }
     })
     .join("\n\n");
+}
+
+/** Every image a body refers to, in the order it uses them. What the editor
+ *  sweeps against when a body stops mentioning a file. */
+export function imageNames(body: string): string[] {
+  return parseBody(body).flatMap((block) => (block.kind === "image" ? [block.src] : []));
 }
 
 /** Words per minute for a reader who is actually reading. The number is only

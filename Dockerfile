@@ -27,6 +27,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 #   docker compose exec web node scripts/migrate.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+# Uploaded images are not part of the build: they arrive at runtime and live in
+# a volume mounted here. Creating it now, owned by the app, is what makes Docker
+# hand the volume over with the right owner the first time it is mounted.
+RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads
 USER nextjs
 EXPOSE 3100
 CMD ["node", "server.js"]

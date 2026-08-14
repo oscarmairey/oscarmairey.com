@@ -7,6 +7,7 @@ import Entry from "@/components/site/entry";
 import { parseBody, readingTime, serializeBlocks, type Block } from "@/lib/blocks";
 import { formatDay } from "@/lib/format";
 import { itemOf, sections, type Draft, type EditField } from "@/lib/labels";
+import { ACCEPT, imageSize, mediaUrl } from "@/lib/media";
 import { deleteItem, saveItem, setItemPublished } from "./actions";
 import { Region, selectionIn } from "./editable";
 
@@ -69,6 +70,10 @@ export default function Editor({ initial, live }: Props) {
 
   const surface = useRef<HTMLDivElement>(null);
   const menuEl = useRef<HTMLDivElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+
+  /* Which block was last written in, so a pasted image knows where to land. */
+  const active = useRef(0);
 
   /* A date is not text: it is edited by the browser's own picker, in the place
      the date is printed, and only while it is being set. */
@@ -327,6 +332,70 @@ export default function Editor({ initial, live }: Props) {
     else setMenu(null);
   }
 
+  /* ---- images ------------------------------------------------------------- */
+
+  /** The size the file already knows about itself. It ends up in the stored
+   *  name, so the page can reserve the box before the bytes arrive. */
+  async function measure(file: File) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const size = { width: bitmap.width, height: bitmap.height };
+      bitmap.close();
+      return size;
+    } catch {
+      return null;
+    }
+  }
+
+  function place(src: string) {
+    const after = Math.min(active.current, rows.length - 1);
+    const image: Row = { id: seed.current.n++, v: 0, block: { kind: "image", src, text: "" } };
+
+    const next = [...rows];
+    const note = noteAfter(next, after);
+    next.splice(note === -1 ? after + 1 : note + 1, 0, image);
+
+    edit(next, { key: key(image, "text"), at: 0 });
+  }
+
+  /** Paste one in, drop one on the page, or pick one from the menu: all three
+   *  end here, and the image is in the page as soon as it is on disk. */
+  async function upload(file: File) {
+    setMenu(null);
+    setBusy(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const size = await measure(file);
+      if (size) {
+        form.set("width", String(size.width));
+        form.set("height", String(size.height));
+      }
+
+      const answer = await fetch("/admin/media", { method: "POST", body: form });
+      if (!answer.ok) {
+        setError("That image did not upload. PNG, JPEG, WebP, GIF or AVIF, under 8 MB.");
+        return;
+      }
+      const { name } = (await answer.json()) as { name: string };
+      place(name);
+    } catch {
+      setError("That image did not upload. Check the connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const images = (list: FileList | null) =>
+    Array.from(list ?? []).filter((file) => file.type.startsWith("image/"));
+
+  function removeImage() {
+    if (!menu) return;
+    edit(rows.filter((_, at) => at !== menu.row));
+    setMenu(null);
+  }
+
   /* The touch path: no right button, so a selection offers the same menu. */
   useEffect(() => {
     const onSelect = () => {
@@ -421,6 +490,8 @@ export default function Editor({ initial, live }: Props) {
         caret={at(key(row, "text"))}
         onChange={(text) => change(i, "text", text)}
         onKeyDown={(event, el) => onKeyDown(i, "text", event, el)}
+        onFocus={() => (active.current = i)}
+        onFiles={(files) => void upload(files[0])}
       />
       {note && note.block.kind === "note" && (
         <span className="sn" key={key(note, "note")}>
@@ -433,6 +504,7 @@ export default function Editor({ initial, live }: Props) {
             caret={at(key(note, "note"))}
             onChange={(text) => change(i + 1, "note", text)}
             onKeyDown={(event, el) => onKeyDown(i + 1, "note", event, el)}
+            onFocus={() => (active.current = i + 1)}
           />
         </span>
       )}
@@ -441,6 +513,26 @@ export default function Editor({ initial, live }: Props) {
 
   const blocks = rows.map((row, i) => {
     if (row.block.kind === "note") return null;
+
+    if (row.block.kind === "image") {
+      const { src, text } = row.block;
+      return (
+        <figure key={key(row, "text")}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mediaUrl(src)} alt={text} {...imageSize(src)} />
+          <Region
+            as="figcaption"
+            source={text}
+            region={region(row, "text")}
+            placeholder="Caption"
+            caret={at(key(row, "text"))}
+            onChange={(caption) => change(i, "text", caption)}
+            onKeyDown={(event, el) => onKeyDown(i, "text", event, el)}
+            onFocus={() => (active.current = i)}
+          />
+        </figure>
+      );
+    }
 
     if (row.block.kind === "h2") {
       return (
@@ -453,6 +545,8 @@ export default function Editor({ initial, live }: Props) {
           caret={at(key(row, "text"))}
           onChange={(text) => change(i, "text", text)}
           onKeyDown={(event, el) => onKeyDown(i, "text", event, el)}
+          onFocus={() => (active.current = i)}
+          onFiles={(files) => void upload(files[0])}
         />
       );
     }
@@ -469,6 +563,7 @@ export default function Editor({ initial, live }: Props) {
             caret={at(key(row, "text"))}
             onChange={(text) => change(i, "text", text)}
             onKeyDown={(event, el) => onKeyDown(i, "text", event, el)}
+            onFocus={() => (active.current = i)}
           />
           <Region
             key={`${key(row, "source")}`}
@@ -489,9 +584,6 @@ export default function Editor({ initial, live }: Props) {
     return paragraph(row, i, note === -1 ? undefined : rows[note], i === 0);
   });
 
-  /* A heading, a quote and a sidenote are what a block is; emphasis and a link
-     are what a run of text is. So the first three are offered on a block's own
-     text and the last two anywhere. */
   /* Whatever a label prints under the title is set under the title: a company's
      period and role are typed there, and a note's date is picked there. The
      label decides which, and where in the line; this only says how. */
@@ -529,6 +621,9 @@ export default function Editor({ initial, live }: Props) {
     );
   };
 
+  /* A heading, a quote, a sidenote and an image are what a block is; emphasis
+     and a link are what a run of text is. So the first four are offered on a
+     block's own text and the last two anywhere. */
   const current = menu?.part === "text" ? rows[menu.row]?.block.kind : undefined;
   const hasNote = menu ? noteAfter(rows, menu.row) !== -1 : false;
 
@@ -540,6 +635,13 @@ export default function Editor({ initial, live }: Props) {
         onContextMenu={(event) => {
           event.preventDefault();
           open(event.clientX, event.clientY);
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          const dropped = images(event.dataTransfer.files);
+          if (dropped.length === 0) return;
+          event.preventDefault();
+          void upload(dropped[0]);
         }}
       >
         <Entry
@@ -613,6 +715,15 @@ export default function Editor({ initial, live }: Props) {
               Sidenote
             </button>
           )}
+          {current === "image" ? (
+            <button type="button" onClick={removeImage}>
+              Remove image
+            </button>
+          ) : (
+            <button type="button" onClick={() => picker.current?.click()}>
+              Image
+            </button>
+          )}
           <button type="button" onClick={() => wrap("*", "*")}>
             Emphasis
           </button>
@@ -621,6 +732,20 @@ export default function Editor({ initial, live }: Props) {
           </button>
         </div>
       )}
+
+      {/* The fallback way in, for a screen with no clipboard and no drag. */}
+      <input
+        ref={picker}
+        className="adm-picker"
+        type="file"
+        accept={ACCEPT}
+        aria-label="Add an image"
+        onChange={(event) => {
+          const chosen = images(event.target.files);
+          event.target.value = "";
+          if (chosen.length > 0) void upload(chosen[0]);
+        }}
+      />
 
       <div className="adm-actions">
         <p className={error ? "adm-status bad" : "adm-status"} role="status">

@@ -60,6 +60,11 @@
   box-shadow: none;
 }
 
+/* The file picker is only ever opened by the menu. */
+.adm-picker {
+  display: none;
+}
+
 /* ---- the formatting menu --------------------------------------------- */
 
 /* Raised by a hairline and nothing else: no shadow, no radius, no icons. */

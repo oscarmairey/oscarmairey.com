@@ -1,6 +1,7 @@
 node_modules
 .next
 .git
+uploads
 # Secrets must never reach the image; they arrive through env_file at runtime.
 .env
 .env.*

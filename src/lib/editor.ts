@@ -95,6 +95,16 @@ export async function deleteItem(label: Label, id: number): Promise<void> {
   invalidateContent();
 }
 
+/** Whether any entry still refers to a stored file. Names contain no wildcards
+ *  by construction, so LIKE is looking for exactly what it is given. */
+export async function bodyUses(name: string): Promise<boolean> {
+  const row = await queryOne<{ found: number }>(
+    "SELECT 1 AS found FROM writings WHERE body LIKE '%' || $1 || '%' LIMIT 1",
+    [name],
+  );
+  return row !== undefined;
+}
+
 /** The first free slug in a label's namespace: the title's own, then the same
  *  with -2, -3 after it. Slugs are never typed, so a collision has to resolve
  *  itself rather than ask. */

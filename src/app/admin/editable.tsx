@@ -199,7 +199,7 @@ export function placeCaret(root: HTMLElement, offset: number) {
 
 /* ---- the region ---------------------------------------------------------- */
 
-export type Tag = "h1" | "h2" | "p" | "span" | "div";
+export type Tag = "h1" | "h2" | "p" | "span" | "div" | "figcaption";
 
 export type RegionProps = {
   as: Tag;
@@ -216,6 +216,8 @@ export type RegionProps = {
   onChange: (source: string) => void;
   onKeyDown?: (event: React.KeyboardEvent<HTMLElement>, el: HTMLElement) => void;
   onFocus?: (el: HTMLElement) => void;
+  /** An image pasted into the text. Handled by the editor, not by the region. */
+  onFiles?: (files: File[]) => void;
 };
 
 export function Region({
@@ -229,6 +231,7 @@ export function Region({
   onChange,
   onKeyDown,
   onFocus,
+  onFiles,
 }: RegionProps) {
   const el = useRef<HTMLElement>(null);
 
@@ -261,7 +264,17 @@ export function Region({
       onKeyDown={(event) => onKeyDown?.(event, event.currentTarget as HTMLElement)}
       onFocus={(event) => onFocus?.(event.currentTarget as HTMLElement)}
       onPaste={(event) => {
-        /* Whatever was copied arrives as text, never as somebody else's markup. */
+        /* An image on the clipboard is an image in the page. */
+        const files = Array.from(event.clipboardData.files).filter((file) =>
+          file.type.startsWith("image/"),
+        );
+        if (files.length > 0 && onFiles) {
+          event.preventDefault();
+          onFiles(files);
+          return;
+        }
+
+        /* Anything else arrives as text, never as somebody else's markup. */
         event.preventDefault();
         const text = event.clipboardData.getData("text/plain").replace(/\s+/g, " ");
         document.execCommand("insertText", false, text);

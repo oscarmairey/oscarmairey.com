@@ -1,5 +1,6 @@
 import type { Block } from "@/lib/blocks";
 import { inline } from "@/lib/inline";
+import { imageSize, mediaUrl } from "@/lib/media";
 
 /** The one renderer for a writing's body. The public page and the editor's
  *  preview both mount this component, so the preview cannot drift from the
@@ -18,6 +19,24 @@ export default function Prose({ blocks }: { blocks: Block[] }) {
                 <p>{inline(block.text)}</p>
                 {block.source && <p className="src">{inline(block.source)}</p>}
               </blockquote>
+            );
+
+          /* A plain <img>: the file was stored as it arrived, and the size it
+             was measured at is in its name, so there is nothing to optimise at
+             request time and no loader to configure. */
+          case "image":
+            return (
+              <figure key={i}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={mediaUrl(block.src)}
+                  alt={block.text}
+                  loading="lazy"
+                  decoding="async"
+                  {...imageSize(block.src)}
+                />
+                {block.text && <figcaption>{inline(block.text)}</figcaption>}
+              </figure>
             );
 
           /* Notes render inside the paragraph they follow, so the float starts
