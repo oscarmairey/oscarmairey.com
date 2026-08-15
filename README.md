@@ -39,7 +39,34 @@ Changing `SESSION_SECRET` signs every session out.
 ## Checks
 
 ```sh
-npx tsc --noEmit        # the check
+npx tsc --noEmit        # types
+npm test                # the editor, in a browser
+```
+
+`npm test` drives the real editor with Playwright: it writes, publishes,
+unpublishes and deletes. So it never touches the site. `scripts/test.mjs`
+stands up an instance that exists for the length of the run and takes it down
+afterwards:
+
+| | |
+|---|---|
+| database | `oscarmairey_test`, dropped and re-migrated before every run |
+| build | `.next-test`, so the dev server on 3101 is left alone |
+| uploads | `.test/uploads`, wiped with the run |
+| password | invented per run, unrelated to the real one |
+| port | 3102 on the loopback, with no proxy in front of it |
+
+Because the database is rebuilt from the migrations each time, the suite starts
+from the same content on every run and has nothing to clean up. The suite
+refuses to start if it is pointed anywhere else — at a hostname, at port 3100 or
+3101, or at a database not named `oscarmairey_test` — and it refuses before it
+loads the browser, so a wrong target is turned away whatever is installed.
+
+The test database is made once:
+
+```sh
+docker exec xtrapoll-db-1 psql -U xtrapoll -d postgres \
+  -c 'CREATE DATABASE oscarmairey_test OWNER oscarmairey'
 ```
 
 There is no linter. `next lint` was removed in Next 16, and `eslint-config-next`

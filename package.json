@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node scripts/test.mjs",
     "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "@types/pg": "^8.21.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "playwright": "^1.62.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

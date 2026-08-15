@@ -7,6 +7,11 @@ const domains = ["oscarmairey.com", "www.oscarmairey.com", "dev.oscarmairey.com"
 const nextConfig = {
   output: 'standalone',
 
+  /* The test harness starts a second dev server against a throwaway database,
+     and two servers sharing one build directory tread on each other. It sets
+     this so the one Oscar is using is never disturbed. */
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+
   /* Dev only. Without this, Next blocks cross-origin requests to /_next/*,
      which includes the HMR socket — and a dev client that cannot open that
      socket never finishes hydrating, so nothing on the page is interactive. */

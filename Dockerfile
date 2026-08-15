@@ -4,6 +4,9 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+# The test harness's browser is a development tool and has no business in an
+# image: playwright would otherwise pull a hundred megabytes of Chromium here.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN npm ci
 
 FROM node:20-alpine AS builder

@@ -15,7 +15,11 @@
 
 # next.js
 /.next/
+/.next-test/
 /out/
+
+# what the test harness writes: its own uploads, wiped every run
+/.test/
 
 # production
 /build

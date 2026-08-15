@@ -1,5 +1,8 @@
 node_modules
 .next
+.next-test
+.test
+tests
 .git
 uploads
 # The source the icons were generated from. Not part of the site.
