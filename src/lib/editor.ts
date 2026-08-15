@@ -1,4 +1,4 @@
-import { COLUMNS as READ, invalidateContent } from "@/lib/content";
+import { COLUMNS as READ, ORDER, invalidateContent } from "@/lib/content";
 import { query, queryOne } from "@/lib/db";
 import type { Draft, Label, Row } from "@/lib/labels";
 import { sections } from "@/lib/labels";
@@ -17,14 +17,12 @@ const COLUMNS = `${READ},
   COALESCE(to_char(published_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '') AS date
 `;
 
-/** The public order, with one difference: a draft has no publication date, and
- *  the useful thing about it here is when it was last touched. */
-const orderFor = (label: Label) =>
-  label === "note" ? "COALESCE(published_at, updated_at) DESC, id DESC" : "created_at DESC, id DESC";
+/** The same order the site reads, drafts sitting among the published in the
+ *  place Oscar put them. */
 
 export function listItems(label: Label): Promise<Row[]> {
   return query<Row>(
-    `SELECT ${COLUMNS} FROM writings WHERE label = $1 ORDER BY ${orderFor(label)}`,
+    `SELECT ${COLUMNS} FROM writings WHERE label = $1 ORDER BY ${ORDER}`,
     [label],
   );
 }
@@ -54,12 +52,16 @@ const values = (slug: string, draft: Draft) => [
 ];
 
 /** Nothing is born on the site. Every label starts as a draft and is published
- *  by a press, which is also what freezes its address. */
+ *  by a press, which is also what freezes its address.
+ *
+ *  And it starts at the top of its list, which is where the newest thing
+ *  usually belongs. Anywhere else is one drag away. */
 export async function createItem(slug: string, draft: Draft): Promise<number> {
   const row = await queryOne<{ id: number }>(
     `INSERT INTO writings
-       (label, slug, title, subtitle, byline, body, period, reading_time, published_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::timestamptz)
+       (label, slug, title, subtitle, byline, body, period, reading_time, published_at, position)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::timestamptz,
+             (SELECT COALESCE(MIN(position), 1) - 1 FROM writings WHERE label = $1))
      RETURNING id::int AS id`,
     values(slug, draft),
   );
@@ -122,6 +124,20 @@ export async function bodyUses(name: string): Promise<boolean> {
     [name],
   );
   return row !== undefined;
+}
+
+/** The order of a whole list, written in one statement so it cannot be left
+ *  half done. The ids arrive in the order they are to be read in. */
+export async function reorder(label: Label, ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  await query(
+    `UPDATE writings AS w
+     SET position = given.n, updated_at = now()
+     FROM (SELECT unnest($2::int[]) AS id, generate_subscripts($2::int[], 1) AS n) AS given
+     WHERE w.id = given.id AND w.label = $1`,
+    [label, ids],
+  );
+  invalidateContent();
 }
 
 /** The first free slug in a label's namespace: the title's own, then the same

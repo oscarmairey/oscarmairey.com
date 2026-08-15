@@ -24,9 +24,11 @@ write. A second, slower audience comes back for the notes.
   "Index" label on the home page.
 - Text is written by Oscar. An unpublished entry is out of the site entirely, whatever its
   label: listings, sitemap, feed and its own address.
-- Nobody types a slug, a reading time or an order. All three are derived: from the title,
-  from the body, and from when a thing was made. The slug follows the title while an entry
-  is a draft and freezes at its first publish: a published address never moves.
+- Nobody types a slug or a reading time. Both are derived, from the title and from the
+  body. The slug follows the title while an entry is a draft and freezes at its first
+  publish: a published address never moves.
+- The order of every list is Oscar's, dragged by the grip on the left of each row in the
+  editor. A new entry starts at the top and is moved from there.
 - A book is a title, its author and the one sentence that says why it stayed. Never a
   summary of the book.
 
@@ -53,8 +55,10 @@ one line the lists print), `byline` (a book's author, a company's role), `body`,
 whatever its label, and is published by a press. `url` is still in the table and is read by
 nothing: a company's link left the site and the one row that had one kept it.
 
-Nothing is ordered by hand. A list is newest first: a note by the day it was published,
-everything else by the day it was made.
+Every list is ordered by hand: a `position` column, lowest first, dragged into place in the
+editor and read the same way by the site. It was derived from dates once; the record is not
+the order it happened in, and only Oscar knows the difference. A new entry is inserted at
+the top. Drafts hold their place among the published, so publishing one does not move it.
 
 Two routes exist for uploaded images: `POST /admin/media` takes one in behind the editor's
 session, and `GET /media/[name]` serves it off disk. See Images below.

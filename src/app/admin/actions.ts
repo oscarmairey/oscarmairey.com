@@ -153,6 +153,27 @@ export async function setItemPublished(
   }
 }
 
+/** The order of a list, as dragged. The ids are checked for shape and the
+ *  update is scoped to the label, so a bad list cannot move somebody else's. */
+export async function reorderItems(
+  section: string,
+  ids: number[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireSession();
+
+  if (!isSection(section)) return { ok: false, error: "Unknown kind of entry." };
+  if (!Array.isArray(ids) || ids.some((id) => !Number.isInteger(id))) {
+    return { ok: false, error: "That is not an order." };
+  }
+
+  try {
+    await store.reorder(sections[section].label, ids);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: message(error) };
+  }
+}
+
 /** The bio saves like an entry does: on its own, a few seconds after the typing
  *  stops, and without revalidating anything — the home page is dynamic and reads
  *  through the cache this write has already emptied. */

@@ -51,6 +51,60 @@
   user-select: none;
 }
 
+/* ---- taking hold of a row -------------------------------------------- */
+
+/* Four dots, drawn rather than fetched: one gradient tiled twice across and
+   twice down, six pixels across each, in the grey the metadata is in. The
+   padding around them is the part a thumb aims at; the dots are the part an
+   eye sees. No button, no border, no box. */
+.adm .rows > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.adm-rowbody {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-grip {
+  flex: none;
+  box-sizing: content-box;
+  width: 18px;
+  height: 18px;
+  padding: 13px;
+  margin: 0.05em -13px 0 -13px;
+  border: 0;
+  background-color: transparent;
+  background-image: radial-gradient(circle, currentColor 3px, transparent 3.2px);
+  background-size: 50% 50%;
+  background-clip: content-box;
+  color: var(--ink-3);
+  cursor: grab;
+  /* A drag here is a drag, not the page scrolling under the finger. */
+  touch-action: none;
+  transition: color 120ms var(--ease);
+}
+
+.adm-grip:hover {
+  color: var(--oxide);
+}
+
+.adm-grip:active {
+  cursor: grabbing;
+}
+
+/* The row being carried: lifted off the page, and still legible under the
+   finger holding it. */
+.adm-held {
+  opacity: 0.6;
+}
+
+.adm-held .adm-grip {
+  color: var(--oxide);
+}
+
 /* ---- the stamp, which is set where it is read ------------------------- */
 
 /* A date is picked, not typed, so it is a button that becomes the browser's

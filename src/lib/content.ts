@@ -1,6 +1,6 @@
 import { site } from "@/content/site";
 import { query, queryOne } from "@/lib/db";
-import type { Item, Label, Section } from "@/lib/labels";
+import type { Item, Section } from "@/lib/labels";
 import { sections } from "@/lib/labels";
 
 /** Everything the public site reads, and the reason it survives a dead database.
@@ -48,10 +48,9 @@ export const COLUMNS = `
   reading_time AS "readingTime"
 `;
 
-/** Newest first, everywhere. A note is dated by the day it was published and
- *  everything else by the day it was made. Nothing is ordered by hand. */
-export const orderFor = (label: Label) =>
-  label === "note" ? "COALESCE(published_at, created_at) DESC, id DESC" : "created_at DESC, id DESC";
+/** The order Oscar dragged them into. Lower is higher up; a new entry starts at
+ *  the top, where the newest thing usually belongs, and is moved from there. */
+export const ORDER = "position, id";
 
 /** The one line on the home page that is not an entry.
  *
@@ -90,7 +89,7 @@ export async function published(section: Section): Promise<Item[]> {
     const value = await query<Item>(
       `SELECT ${COLUMNS},
               to_char(COALESCE(published_at, created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
-       FROM writings WHERE label = $1 AND published ORDER BY ${orderFor(label)}`,
+       FROM writings WHERE label = $1 AND published ORDER BY ${ORDER}`,
       [label],
     );
     store.set(section, { value, at: Date.now() });

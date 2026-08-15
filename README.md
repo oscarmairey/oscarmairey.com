@@ -153,9 +153,14 @@ production, never `public/`, which the build would overwrite. They are served
 from `/media/<name>`. An entry that stops mentioning a file takes it with
 it.
 
-Slugs and reading times are never typed, and neither is an order. The slug and
-the reading time are derived when you save — the slug follows the title until
-the entry is first published and then stays put — and a list is simply newest first.
+Slugs and reading times are never typed: both are derived when you save, and
+the slug follows the title until the entry is first published and then stays
+put.
+
+The order of a list is typed by hand, or rather dragged. Every row in the
+editor's lists has a grip on its left — four dots, made for a thumb as much as
+a cursor — and the order they end up in is the order the site reads, drafts
+included. A new entry appears at the top.
 
 Everything is a draft first, whatever its label: invisible to everyone else,
 saving itself as you type. Publishing is a deliberate press, and so is any edit

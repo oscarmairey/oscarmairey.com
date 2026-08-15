@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { listItems } from "@/lib/editor";
 import { isSection, sections } from "@/lib/labels";
+import Rows from "./rows";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 /** The same list the site prints, in the same classes, with the drafts in it —
  *  which every label now has — and every title leading to the editor instead of
- *  the page. */
+ *  the page. Each row has a grip: the order here is the order the site reads,
+ *  drafts included, so dragging one moves it for everybody. */
 export default async function SectionList({ params }: Params) {
   await requireSession();
 
@@ -31,19 +33,16 @@ export default async function SectionList({ params }: Params) {
       <h1 className="vh">{spec.plural}</h1>
 
       <section className="section">
-        <ul className="rows">
-          {rows.map((row) => (
-            <li key={row.id}>
-              <p className="line">
-                <Link className="t" href={`/admin/${section}/${row.slug}`}>
-                  {row.title || "Untitled"}
-                </Link>
-                <span className="when">{row.published ? spec.meta(row).text : "Draft"}</span>
-              </p>
-              {row.subtitle && <p className="note">{row.subtitle}</p>}
-            </li>
-          ))}
-        </ul>
+        <Rows
+          section={section}
+          initial={rows.map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            title: row.title,
+            subtitle: row.subtitle,
+            when: row.published ? spec.meta(row).text : "Draft",
+          }))}
+        />
 
         <div className="adm-buttons">
           <Link className="adm-btn primary" href={`/admin/${section}/new`}>
