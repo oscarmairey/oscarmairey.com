@@ -131,6 +131,9 @@ await freshDatabase(url);
 
 const server = spawn("npx", ["next", "dev", "-p", String(PORT), "--hostname", "127.0.0.1"], {
   cwd: root,
+  /* Its own process group: next runs the server as a child of a child, and
+     signalling only the one we spawned leaves the server holding the port. */
+  detached: true,
   env: {
     ...process.env,
     NODE_ENV: "development",
@@ -150,8 +153,15 @@ const listen = (stream) => stream.on("data", (chunk) => (said += chunk.toString(
 listen(server.stdout);
 listen(server.stderr);
 
+let stopped = false;
 const stop = () => {
-  if (!server.killed) server.kill("SIGTERM");
+  if (stopped || !server.pid) return;
+  stopped = true;
+  try {
+    process.kill(-server.pid, "SIGTERM");
+  } catch {
+    /* already gone */
+  }
 };
 process.on("exit", stop);
 process.on("SIGINT", () => (stop(), process.exit(130)));
