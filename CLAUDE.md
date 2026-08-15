@@ -67,7 +67,10 @@ the site and `src/components/site/entry.tsx` the only page.
 Bodies use a small block model (`p`, `h2`, `quote`, `note`, `list`, `image`) with a tiny
 inline formatter in `src/lib/inline.tsx` supporting `[label](url)`, `**bold**`, `*italic*`,
 `__underlined__` and `[^1]` note markers. A list is stored as its lines, each behind `* `.
-No MDX toolchain. What is left in `src/content` — the bio, the links — still changes with a deploy.
+No MDX toolchain. The home page's bio is a row in `settings`, edited on the hub at `/admin`
+where the home page prints it; `site.bio` in `src/content/site.ts` is the fallback the page
+uses if the database has never answered. What is left in `src/content` — the links, the
+descriptions — still changes with a deploy.
 
 The editor at `/admin` is one password and no chrome of its own. It sits inside the site's
 shell, on the site's column, under the site's masthead: there is no second navigation.

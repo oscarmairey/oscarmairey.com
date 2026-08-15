@@ -1,4 +1,5 @@
-import { query } from "@/lib/db";
+import { site } from "@/content/site";
+import { query, queryOne } from "@/lib/db";
 import type { Item, Label, Section } from "@/lib/labels";
 import { sections } from "@/lib/labels";
 
@@ -30,6 +31,7 @@ const store = globalForContent.__omLists;
 /** Called after every write in the editor so a publish is visible at once. */
 export function invalidateContent() {
   store.clear();
+  cachedBio = undefined;
 }
 
 /** Every column above the database reads, in the order the type declares them.
@@ -50,6 +52,29 @@ export const COLUMNS = `
  *  everything else by the day it was made. Nothing is ordered by hand. */
 export const orderFor = (label: Label) =>
   label === "note" ? "COALESCE(published_at, created_at) DESC, id DESC" : "created_at DESC, id DESC";
+
+/** The one line on the home page that is not an entry.
+ *
+ *  Cached and forgiving like the lists: the last good answer if the database
+ *  stops answering, and the constant in src/content/site.ts if it never has.
+ *  The home page always has a bio. */
+let cachedBio: { value: string; at: number } | undefined;
+
+export async function bio(): Promise<string> {
+  try {
+    if (cachedBio && Date.now() - cachedBio.at < TTL) return cachedBio.value;
+
+    const row = await queryOne<{ value: string }>(
+      "SELECT value FROM settings WHERE key = 'bio'",
+    );
+    const value = row?.value?.trim() || site.bio;
+    cachedBio = { value, at: Date.now() };
+    return value;
+  } catch (error) {
+    console.error(`[content] bio unavailable: ${(error as Error).message}`);
+    return cachedBio?.value ?? site.bio;
+  }
+}
 
 /** Everything published under one label. Books and companies are written
  *  published, so this is the whole list for them and the live half for notes. */

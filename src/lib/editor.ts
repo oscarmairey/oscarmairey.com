@@ -98,6 +98,22 @@ export async function deleteItem(label: Label, id: number): Promise<void> {
   invalidateContent();
 }
 
+/** The bio, as the editor reads and writes it. Unlike the public read this one
+ *  throws: the editor must say plainly that the database is down. */
+export async function getBio(): Promise<string> {
+  const row = await queryOne<{ value: string }>("SELECT value FROM settings WHERE key = 'bio'");
+  return row?.value ?? "";
+}
+
+export async function setBio(value: string): Promise<void> {
+  await query(
+    `INSERT INTO settings (key, value) VALUES ('bio', $1)
+     ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = now()`,
+    [value],
+  );
+  invalidateContent();
+}
+
 /** Whether any entry still refers to a stored file. Names contain no wildcards
  *  by construction, so LIKE is looking for exactly what it is given. */
 export async function bodyUses(name: string): Promise<boolean> {

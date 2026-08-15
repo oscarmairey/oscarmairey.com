@@ -1,6 +1,5 @@
 import Entries from "@/components/site/entries";
-import { site } from "@/content/site";
-import { published } from "@/lib/content";
+import { bio, published } from "@/lib/content";
 import type { Item, Section } from "@/lib/labels";
 import { sections } from "@/lib/labels";
 
@@ -26,7 +25,8 @@ function Index({ section, items }: { section: Section; items: Item[] }) {
 }
 
 export default async function Home() {
-  const [notes, books, companies] = await Promise.all([
+  const [line, notes, books, companies] = await Promise.all([
+    bio(),
     published("notes"),
     published("books"),
     published("companies"),
@@ -35,7 +35,7 @@ export default async function Home() {
   return (
     <>
       <div className="lede">
-        <p>{site.bio}</p>
+        <p>{line}</p>
       </div>
 
       <Index section="notes" items={notes} />

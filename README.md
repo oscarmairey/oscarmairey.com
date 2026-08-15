@@ -4,8 +4,9 @@ Next.js (App Router) on the front, Postgres behind it, one password in front of
 an editor at `/admin`.
 
 Notes, books and companies are one table with three labels, edited from the
-browser. What is left in `src/content` — the bio, the links — still changes with
-a deploy.
+browser, the bio included: it is a row in `settings`, edited at `/admin` where
+the home page prints it. What is left in `src/content` — the links, the
+descriptions search engines quote — still changes with a deploy.
 
 ## Local
 

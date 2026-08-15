@@ -153,6 +153,19 @@ export async function setItemPublished(
   }
 }
 
+/** The bio saves like an entry does: on its own, a few seconds after the typing
+ *  stops, and without revalidating anything — the home page is dynamic and reads
+ *  through the cache this write has already emptied. */
+export async function saveBio(value: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireSession();
+  try {
+    await store.setBio(value.trim());
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: message(error) };
+  }
+}
+
 export async function deleteItem(section: string, id: number) {
   await requireSession();
 

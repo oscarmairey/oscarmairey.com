@@ -14,7 +14,11 @@ export const site = {
     "Oscar Mairey builds the technology infrastructure of ARTE One, an AI-native hedge fund based in Dubai. Previously at Chainraizer, Ta-da, and Le Crypto Daily.",
   ogDescription:
     "Algorithmic asset manager at ARTE One. Builds the software behind the funds and products he works on.",
-  /** The home page is an index, so the bio is two sentences. The record it
+  /** The fallback. The bio Oscar edits lives in the database and is read
+   *  through src/lib/content.ts; this is what the home page prints if that has
+   *  never answered, so the page is never without one.
+   *
+   *  The home page is an index, so the bio is two sentences. The record it
    *  used to carry — Chainraizer, Ta-da, Le Crypto Daily, the dates — lives
    *  on /companies. First person, like the book notes: the masthead directly
    *  above already says the name. `description` and

@@ -142,6 +142,12 @@
   background: var(--paper);
 }
 
+.adm-status {
+  margin-top: 0.9rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+
 .adm-actions .adm-status {
   flex: 1 1 100%;
   order: -1;
@@ -150,7 +156,13 @@
 }
 
 @media (min-width: 32rem) {
-  .adm-actions .adm-status {
+  .adm-status {
+  margin-top: 0.9rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+
+.adm-actions .adm-status {
     flex: 1 1 auto;
     order: 0;
     text-align: right;
