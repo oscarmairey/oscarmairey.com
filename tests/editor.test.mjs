@@ -98,6 +98,11 @@ const browser = await chromium.launch();
 const context = await browser.newContext();
 const page = await context.newPage();
 
+/* The test server compiles each route the first time it is asked for one, so
+   the first visit to a page is slower than every visit after it. */
+page.setDefaultNavigationTimeout(90000);
+page.setDefaultTimeout(30000);
+
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -665,6 +670,66 @@ async function blocksBehave() {
   await page.waitForURL(`${BASE}/admin/notes`, { timeout: 15000 });
 }
 
+/** The order is Oscar's, and it is dragged. */
+async function ordersByHand() {
+  console.log("\nordering");
+  const titles = () => page.locator(".adm-rowbody a.t").allTextContents();
+
+  await page.goto(`${BASE}/admin/books`, { waitUntil: "networkidle" });
+  const before = await titles();
+  ok("the list has grips", (await page.locator(".adm-grip").count()) === before.length, before.join(" | "));
+
+  /* The third row, taken by its grip and carried above the first. */
+  const grip = await page.locator(".adm-grip").nth(2).boundingBox();
+  const first = await page.locator(".rows > li").first().boundingBox();
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(first.x + 40, first.y + first.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+
+  const after = await titles();
+  ok("the row moved to the top", after[0] === before[2], after.join(" | "));
+  ok("and the rest kept its order", after[1] === before[0] && after[2] === before[1], after.join(" | "));
+
+  await page.waitForFunction(
+    () => /^Saved at/.test(document.querySelector(".adm-status")?.textContent ?? ""),
+    null,
+    { timeout: 15000 },
+  );
+
+  await page.reload({ waitUntil: "networkidle" });
+  ok("the order survives a reload", (await titles()).join(" | ") === after.join(" | "), (await titles()).join(" | "));
+
+  await page.goto(`${BASE}/books`, { waitUntil: "networkidle" });
+  const shown = await page.locator(".rows a.t").allTextContents();
+  ok("the site reads it in that order", shown.join(" | ") === after.join(" | "), shown.join(" | "));
+
+  /* And the keyboard reaches it too. */
+  await page.goto(`${BASE}/admin/books`, { waitUntil: "networkidle" });
+  await page.locator(".adm-grip").first().focus();
+  await page.keyboard.press("ArrowDown");
+  await page.waitForTimeout(400);
+  const nudged = await titles();
+  ok("an arrow moves a row", nudged[1] === after[0], nudged.join(" | "));
+  await page.waitForFunction(
+    () => /^Saved at/.test(document.querySelector(".adm-status")?.textContent ?? ""),
+    null,
+    { timeout: 15000 },
+  );
+  await page.reload({ waitUntil: "networkidle" });
+  ok("and that survives too", (await titles()).join(" | ") === nudged.join(" | "));
+
+  /* A new entry starts at the top, wherever the list has been dragged. */
+  await page.goto(`${BASE}/admin/books/new`, { waitUntil: "networkidle" });
+  await settled();
+  const fresh = `Playwright newest ${Date.now()}`;
+  await typeInto('[data-region="title"]', fresh);
+  await saved();
+  await page.goto(`${BASE}/admin/books`, { waitUntil: "networkidle" });
+  ok("a new entry starts at the top", (await titles())[0] === fresh, (await titles()).slice(0, 2).join(" | "));
+}
+
 await signIn();
 for (const [section, one] of [["notes", "note"], ["books", "book"], ["companies", "company"]]) {
   if (process.env.ONLY && process.env.ONLY !== section) continue;
@@ -672,6 +737,7 @@ for (const [section, one] of [["notes", "note"], ["books", "book"], ["companies"
 }
 if (!process.env.ONLY) await dateSurvivesPublishing();
 if (!process.env.ONLY || process.env.ONLY === "blocks") await blocksBehave();
+if (!process.env.ONLY || process.env.ONLY === "ordering") await ordersByHand();
 
 console.log(`\npage errors: ${errors.length}`);
 for (const e of errors.slice(0, 8)) console.log(`  ${e.slice(0, 200)}`);

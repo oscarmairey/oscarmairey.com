@@ -95,7 +95,7 @@ const run = (command, args, env, quiet) =>
   });
 
 async function waiting(base) {
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 240; i++) {
     try {
       const answer = await fetch(base, { signal: AbortSignal.timeout(2000) });
       if (answer.ok) return;
@@ -109,6 +109,19 @@ async function waiting(base) {
 
 const url = testUrl();
 const base = `http://127.0.0.1:${PORT}`;
+
+/* A server already on the port is somebody else's, and starting behind it would
+   run the suite against whatever that is. */
+try {
+  await fetch(base, { signal: AbortSignal.timeout(1500) });
+  console.error(
+    `refusing to run: something is already answering on ${base}.\n` +
+      "  Stop it, or give this run a port of its own with TEST_PORT.",
+  );
+  process.exit(2);
+} catch {
+  /* nothing there, which is what we want */
+}
 
 console.log(`  database ${url.replace(/:\/\/[^@]+@/, "://…@")}`);
 console.log(`  server   ${base}\n`);
@@ -130,6 +143,13 @@ const server = spawn("npx", ["next", "dev", "-p", String(PORT), "--hostname", "1
   stdio: ["ignore", "pipe", "pipe"],
 });
 
+/* Kept quiet unless something goes wrong, and then it is the only thing worth
+   reading. */
+let said = "";
+const listen = (stream) => stream.on("data", (chunk) => (said += chunk.toString()));
+listen(server.stdout);
+listen(server.stderr);
+
 const stop = () => {
   if (!server.killed) server.kill("SIGTERM");
 };
@@ -142,6 +162,7 @@ try {
   await run("node", [join(root, "tests/editor.test.mjs")], { TEST_BASE: base, TEST_PASSWORD: PASSWORD });
 } catch (error) {
   console.error(`\n${error.message}`);
+  if (said.trim()) console.error(`\n  what the server said:\n${said.split("\n").map((l) => "  " + l).join("\n")}`);
   failed = true;
 } finally {
   stop();
