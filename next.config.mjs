@@ -2,7 +2,7 @@
 
 /* The site is always reached through Caddy, never on its own port, so both
    origin checks Next makes have to know the domains it answers on. */
-const domains = ["oscarmairey.com", "www.oscarmairey.com", "dev.oscarmairey.com"];
+const domains = ["oscarmairey.com", "dev.oscarmairey.com"];
 
 const nextConfig = {
   output: 'standalone',
