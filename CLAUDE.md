@@ -156,12 +156,37 @@ animation, no scroll-triggered reveals, no animation library. Every page renders
 without JavaScript; the masthead is the only client component on the public site, and only
 because it reads the pathname.
 
-## SEO
+## SEO and machine readers
 
 `metadataBase`, per-route canonicals, OpenGraph and Twitter cards (`src/app/opengraph-image.png`,
-regenerated from `assets/photo.png`), JSON-LD `Person` with corrected `sameAs`, `sitemap.ts`,
-`robots.ts` and an RSS feed at `/feed.xml` carrying notes only. Title template:
-`%s · Oscar Mairey`.
+regenerated from `assets/photo.png`), JSON-LD `Person` on every page and `Article` on a note,
+`sitemap.ts`, a hand-written `robots.txt` and an RSS feed at `/feed.xml` carrying notes only.
+Title template: `%s · Oscar Mairey`.
+
+Half the audience is not a person. An investor running due diligence increasingly reads the
+site through an assistant, and what that assistant quotes is what the reader gets. So the
+site says the same thing in a form built for one, derived from the same cached content layer
+as the pages: never staler than they are, and a draft is as absent there as anywhere else.
+
+| Route | What it is |
+|---|---|
+| `/llms.txt` | the map: the bio, then every published entry as a link with its one line |
+| `/llms-full.txt` | the same, with every body in full |
+| `/md/[section]/[slug]` | one entry as markdown |
+
+The block format was already most of the way there — `## `, `> `, `* `, `[label](url)`,
+`**bold**`, `*italic*` and `[^1]` are what markdown calls them — so `src/lib/markdown.ts`
+changes four things and copies the rest: image sources become absolute, `__underlined__`
+becomes `<u>`, a typed line break becomes markdown's, and sidenotes move to the foot as
+footnotes. Each entry page points at its markdown with
+`<link rel="alternate" type="text/markdown">`. The suffix is not on the entry's own address
+because a dynamic segment cannot carry one, and the catch-all that would allow it stands in
+front of the page it is meant to accompany.
+
+`robots.txt` is written by hand rather than generated, so it can say something: nothing is
+turned away but `/admin`, the map is pointed at in a comment, and the assistants — GPTBot,
+ClaudeBot, PerplexityBot, Google-Extended, CCBot and the rest — are named one by one,
+because a name absent from a block list is easy to miss and easy to doubt.
 
 Social links are `github.com/oscarmairey`, `x.com/oscarmairey`,
 `linkedin.com/in/oscarmairey` — no hyphen in any of the three. The old `cesarioo` handles

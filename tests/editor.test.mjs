@@ -730,6 +730,70 @@ async function ordersByHand() {
   ok("a new entry starts at the top", (await titles())[0] === fresh, (await titles()).slice(0, 2).join(" | "));
 }
 
+/** What a machine reading the site on somebody's behalf is given. */
+async function machinesCanRead() {
+  console.log("\nmachines");
+
+  const get = async (path) => {
+    const answer = await page.request.get(BASE + path);
+    return { status: answer.status(), type: answer.headers()["content-type"] ?? "", body: await answer.text() };
+  };
+
+  const robots = await get("/robots.txt");
+  ok("robots.txt is served", robots.status === 200 && robots.type.startsWith("text/plain"), `${robots.status} ${robots.type}`);
+  ok("it turns nobody away but the editor", robots.body.includes("Disallow: /admin") && !/Disallow:\s*\/\s*$/m.test(robots.body));
+  ok("the assistants are named", ["GPTBot", "ClaudeBot", "PerplexityBot", "Google-Extended", "CCBot"].every((n) => robots.body.includes(n)));
+  ok("and the map is pointed at", robots.body.includes("/llms.txt") && robots.body.includes("Sitemap:"));
+
+  const map = await get("/llms.txt");
+  ok("llms.txt is served", map.status === 200 && map.type.startsWith("text/plain"), `${map.status} ${map.type}`);
+  ok("it opens with the name and the bio", map.body.startsWith("# Oscar Mairey") && map.body.includes("> "), map.body.slice(0, 60));
+  ok("it lists all three", ["## Notes", "## Books", "## Companies"].every((h) => map.body.includes(h)));
+  ok("with absolute addresses", /- \[[^\]]+\]\(https:\/\/oscarmairey\.com\/(notes|books|companies)\//.test(map.body));
+  ok("and no drafts", !map.body.includes("Build It, Then Sell It"), "a draft leaked into llms.txt");
+
+  const full = await get("/llms-full.txt");
+  ok("llms-full.txt is served", full.status === 200 && full.type.startsWith("text/plain"));
+  ok("it carries the bodies", full.body.includes("Every firm I have worked in kept its obligations"), full.body.length + " chars");
+  ok("with headings as markdown", full.body.includes("## What the work actually is"));
+  ok("and quotes as markdown", full.body.includes("> The depositary shall ensure"));
+  ok("and footnotes at the foot", full.body.includes("[^1]: A few hundred is not a rhetorical figure"));
+  ok("and no drafts", !full.body.includes("Build It, Then Sell It"));
+
+  const one = await get("/md/notes/compliance-is-a-software-problem");
+  ok("an entry is markdown on its own", one.status === 200 && one.type.startsWith("text/markdown"), `${one.status} ${one.type}`);
+  ok("it opens with the title", one.body.startsWith("# Compliance Is a Software Problem"), one.body.slice(0, 40));
+  ok("it says where it lives", one.body.includes("- URL: https://oscarmairey.com/notes/compliance-is-a-software-problem"));
+  ok("and when it went up", one.body.includes("- Published: 2026-08-12"));
+
+  const draft = await get("/md/notes/build-it-then-sell-it");
+  ok("a draft has no markdown either", draft.status === 404, String(draft.status));
+  const nonsense = await get("/md/nowhere/x");
+  ok("and neither has a list that does not exist", nonsense.status === 404, String(nonsense.status));
+
+  await page.goto(`${BASE}/notes/compliance-is-a-software-problem`, { waitUntil: "networkidle" });
+  const linked = await page.getAttribute('link[rel="alternate"][type="text/markdown"]', "href");
+  ok("the page points at its markdown", linked === "https://oscarmairey.com/md/notes/compliance-is-a-software-problem", String(linked));
+
+  const types = await page.evaluate(() =>
+    [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => JSON.parse(s.textContent)["@type"]),
+  );
+  ok("and describes itself as an Article", types.includes("Article"), types.join(", "));
+  ok("with the Person still there", types.includes("Person"), types.join(", "));
+
+  const shape = await page.evaluate(() => {
+    const article = [...document.querySelectorAll('script[type="application/ld+json"]')]
+      .map((s) => JSON.parse(s.textContent))
+      .find((d) => d["@type"] === "Article");
+    return { headline: article.headline, published: article.datePublished, author: article.author?.name, url: article.url };
+  });
+  ok("saying only what is true", shape.headline === "Compliance Is a Software Problem" && shape.published === "2026-08-12" && shape.author === "Oscar Mairey", JSON.stringify(shape));
+
+  ok("one h1 on the page", (await page.locator("h1").count()) === 1);
+  ok("the body is an article", (await page.locator("article").count()) === 1);
+  ok("the date is a time", (await page.locator("article time[datetime]").count()) === 1);
+}
+
 await signIn();
 for (const [section, one] of [["notes", "note"], ["books", "book"], ["companies", "company"]]) {
   if (process.env.ONLY && process.env.ONLY !== section) continue;
@@ -738,6 +802,7 @@ for (const [section, one] of [["notes", "note"], ["books", "book"], ["companies"
 if (!process.env.ONLY) await dateSurvivesPublishing();
 if (!process.env.ONLY || process.env.ONLY === "blocks") await blocksBehave();
 if (!process.env.ONLY || process.env.ONLY === "ordering") await ordersByHand();
+if (!process.env.ONLY || process.env.ONLY === "machines") await machinesCanRead();
 
 console.log(`\npage errors: ${errors.length}`);
 for (const e of errors.slice(0, 8)) console.log(`  ${e.slice(0, 200)}`);

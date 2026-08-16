@@ -9,9 +9,13 @@ import { sections } from "@/lib/labels";
  *  Next replaces whole metadata fields rather than merging them, so a page that
  *  names its own canonical drops whatever `alternates` the layout had — which
  *  is how every page but the home page quietly lost the feed link. */
-export const alternatesFor = (canonical: string) => ({
+export const alternatesFor = (canonical: string, markdown?: string) => ({
   canonical,
-  types: { "application/rss+xml": [{ url: "/feed.xml", title: site.name }] },
+  types: {
+    "application/rss+xml": [{ url: "/feed.xml", title: site.name }],
+    /* The same entry, without the page around it. */
+    ...(markdown ? { "text/markdown": markdown } : {}),
+  },
 });
 
 /** The head of every entry page, written once. A missing row returns nothing
@@ -25,7 +29,7 @@ export function entryMetadata(section: Section, item: Item | undefined): Metadat
   return {
     title: item.title,
     description,
-    alternates: alternatesFor(path),
+    alternates: alternatesFor(path, `${site.url}/md/${section}/${item.slug}`),
     openGraph: {
       type: "article",
       title: item.title,
