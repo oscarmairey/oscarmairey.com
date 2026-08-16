@@ -36,21 +36,33 @@ export function invalidateContent() {
 
 /** Every column above the database reads, in the order the type declares them.
  *  The editor selects the same ones plus its own two: keeping the list here and
- *  extending it there is what stops the two drifting apart. */
+ *  extending it there is what stops the two drifting apart.
+ *
+ *  Half of them are the entry's and half are the version's, which is the whole
+ *  point: an address and a place in a list belong to the thing, and everything
+ *  that is written belongs to the draft of it that happens to be live. */
 export const COLUMNS = `
-  id::int AS id,
-  slug,
-  title,
-  subtitle,
-  byline,
-  body,
-  period,
-  reading_time AS "readingTime"
+  w.id::int AS id,
+  w.slug,
+  v.title,
+  v.subtitle,
+  v.byline,
+  v.body,
+  v.period,
+  v.reading_time AS "readingTime"
+`;
+
+/** An entry and the one version of it anybody but Oscar can see. The join is an
+ *  inner one on purpose: an entry that has somehow lost its live version is
+ *  absent rather than rendered as a page with nothing on it. */
+export const LIVE = `
+  FROM writings AS w
+  JOIN writings_versions AS v ON v.id = w.live_version_id
 `;
 
 /** The order Oscar dragged them into. Lower is higher up; a new entry starts at
  *  the top, where the newest thing usually belongs, and is moved from there. */
-export const ORDER = "position, id";
+export const ORDER = "w.position, w.id";
 
 /** The one line on the home page that is not an entry.
  *
@@ -88,8 +100,9 @@ export async function published(section: Section): Promise<Item[]> {
     const { label } = sections[section];
     const value = await query<Item>(
       `SELECT ${COLUMNS},
-              to_char(COALESCE(published_at, created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
-       FROM writings WHERE label = $1 AND published ORDER BY ${ORDER}`,
+              to_char(COALESCE(w.published_at, w.created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
+       ${LIVE}
+       WHERE w.label = $1 AND w.published ORDER BY ${ORDER}`,
       [label],
     );
     store.set(section, { value, at: Date.now() });

@@ -44,9 +44,9 @@ npm test                # the editor, in a browser
 ```
 
 `npm test` drives the real editor with Playwright: it writes, publishes,
-unpublishes and deletes. So it never touches the site. `scripts/test.mjs`
-stands up an instance that exists for the length of the run and takes it down
-afterwards:
+unpublishes, versions and throws versions away. So it never touches the site.
+`scripts/test.mjs` stands up an instance that exists for the length of the run
+and takes it down afterwards:
 
 | | |
 |---|---|
@@ -69,7 +69,8 @@ minutes to a little over two, and left 2.7 GB free at its lowest point where
 the old one left 1.4 GB. A run that changes no code pays no build at all.
 
 Because the database is rebuilt from the migrations each time, the suite starts
-from the same content on every run and has nothing to clean up. The suite
+from the same content on every run and has nothing to clean up — which is just
+as well, since it has no way to delete what it makes. The suite
 refuses to start if it is pointed anywhere else — at a hostname, at port 3100 or
 3101, or at a database not named `oscarmairey_test` — and it refuses before it
 loads the browser, so a wrong target is turned away whatever is installed.
@@ -175,9 +176,23 @@ a cursor — and the order they end up in is the order the site reads, drafts
 included. A new entry appears at the top.
 
 Everything is a draft first, whatever its label: invisible to everyone else,
-saving itself as you type. Publishing is a deliberate press, and so is any edit
-to something already published. Unpublishing takes it back off the site without
-losing it.
+saving itself as you type. Publishing is a deliberate press. Unpublishing takes
+it back off the site without losing it, and it is the only way anything comes
+down: nothing deletes an entry.
+
+An entry can be written more than once. The grey line above the bar names its
+versions — `v1 v2 live v3` — and the `+` at the end of them copies the one on
+screen into a new one to write over; the one it came from stays exactly where it
+was, one press away. Only the version marked `live` is ever shown to anybody, on
+the page, in the lists, in the feed and in the markdown, and moving that mark is
+`Make live`, a press of its own that appears only when the version on screen is
+not already it. A version that is not live can be thrown away by
+`Delete this version`; the live one cannot, so a published address always has
+words behind it.
+
+```sh
+npm run db:migrate     # 010_versions.sql turns every entry into its own v1
+```
 
 What is typed is stored in the same small format under every label:
 

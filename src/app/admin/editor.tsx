@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import Entry from "@/components/site/entry";
 import { parseBody, readingTime, serializeBlocks, type Block } from "@/lib/blocks";
 import { formatDay } from "@/lib/format";
-import { itemOf, sections, type Draft, type EditField } from "@/lib/labels";
+import { itemOf, sections, type Draft, type EditField, type Version } from "@/lib/labels";
 import { ACCEPT, images, prepare } from "@/lib/media";
-import { deleteItem, saveItem, setItemPublished } from "./actions";
+import { addVersion, deleteVersion, saveItem, setItemPublished, setLiveVersion } from "./actions";
 import { Body, Region, blocksFromDom, caretInto, figureHtml, listFrom, listInto } from "./editable";
 
 /** The editor is the page. There is no form and no preview: what is on screen
@@ -24,11 +24,29 @@ import { Body, Region, blocksFromDom, caretInto, figureHtml, listFrom, listInto 
  *
  *  The slug and the reading time are not edited at all, and the slug is not
  *  even held here: both are derived on the server, from the title and the
- *  body, and only the date it settles on comes back. */
+ *  body, and only the date it settles on comes back.
+ *
+ *  An entry can be written more than once. The line above the bar names its
+ *  versions, opens one, starts another — blank, or as a copy of this one — and
+ *  says which of them a reader gets; that last is a press of its own, weighed
+ *  the same as publishing, and nothing else moves it. Opening a version is a
+ *  navigation, because the page is mounted from the version it is showing and a
+ *  region is written exactly once. Whatever is unsaved goes first, and every
+ *  save carries the version it was typed into, so nothing lands in the wrong
+ *  one. */
 
-type Props = { initial: Draft; live: boolean; slug: string };
+type Props = {
+  initial: Draft;
+  live: boolean;
+  slug: string;
+  versions: Version[];
+  liveVersionId: number;
+};
 
 const AUTOSAVE_MS = 3000;
+
+/** Where a save landed: the entry, and the version of it that was written. */
+type Landed = { id: number; versionId: number };
 
 /** Where the menu opens, and what it is being asked about. */
 type Menu = { x: number; y: number; block: HTMLElement | null; onText: boolean } | null;
@@ -38,7 +56,7 @@ type Menu = { x: number; y: number; block: HTMLElement | null; onText: boolean }
 const snapshotOf = (draft: Draft) =>
   JSON.stringify([draft.title, draft.subtitle, draft.body, draft.byline, draft.period, draft.date]);
 
-export default function Editor({ initial, live, slug }: Props) {
+export default function Editor({ initial, live, slug, versions, liveVersionId }: Props) {
   const router = useRouter();
   const spec = sections[initial.section];
 
@@ -46,6 +64,12 @@ export default function Editor({ initial, live, slug }: Props) {
   const [published, setPublished] = useState(live);
   const [menu, setMenu] = useState<Menu>(null);
   const [dating, setDating] = useState(false);
+
+  /* Both move without the page being loaded again: the first save of a new
+     entry makes its v1, and making a version live is answered rather than
+     re-rendered — the editor stays where it is, with what is in it. */
+  const [all, setAll] = useState(versions);
+  const [liveId, setLiveId] = useState(liveVersionId);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +92,10 @@ export default function Editor({ initial, live, slug }: Props) {
   /* Read once. After that the host is the browser's and the model follows it. */
   const opening = useMemo(() => parseBody(initial.body), [initial.body]);
 
+  /* Nothing written here yet. Read from what was mounted, not from what is being
+     typed, so it does not change under the caret it decides. */
+  const blank = initial.title === "" && initial.body === "";
+
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   const took = (blocks: Block[]) => set({ body: serializeBlocks(blocks) });
   const reread = () => host.current && took(blocksFromDom(host.current));
@@ -86,7 +114,7 @@ export default function Editor({ initial, live, slug }: Props) {
 
   const dirty = snapshot !== savedRef.current;
 
-  async function persist(): Promise<number | null> {
+  async function persist(): Promise<Landed | null> {
     const payload = sendingRef.current;
 
     setBusy(true);
@@ -102,16 +130,21 @@ export default function Editor({ initial, live, slug }: Props) {
          settled on, not what was sent. */
       savedRef.current = snapshotOf({ ...payload, id: result.id, date: result.date });
       setSavedAt(new Date());
-      setDraft((d) => ({ ...d, id: result.id, date: result.date }));
+      setDraft((d) => ({ ...d, id: result.id, versionId: result.versionId, date: result.date }));
+
+      /* The first save of a new entry is also what makes its v1, and the line
+         that names the versions has had nothing to name until now. */
+      setAll((was) => (was.length > 0 ? was : [{ id: result.versionId, n: 1 }]));
+      setLiveId((was) => was || result.versionId);
 
       /* A draft's slug follows its title, and a new entry has none until the
          first save gives it one. Either way the address in the bar is the one
-         a reload should land on. */
+         a reload should land on, version and all. */
       if (result.slug && result.slug !== address.current) {
         address.current = result.slug;
-        window.history.replaceState(null, "", `/admin/${spec.section}/${result.slug}`);
+        window.history.replaceState(null, "", editorPath(result.slug));
       }
-      return result.id;
+      return { id: result.id, versionId: result.versionId };
     } catch {
       setError("The save did not go through. Check the connection and try again.");
       return null;
@@ -120,16 +153,29 @@ export default function Editor({ initial, live, slug }: Props) {
     }
   }
 
+  /** The address of this editor, keeping whichever version it is open on. */
+  const editorPath = (to: string) =>
+    `/admin/${spec.section}/${to}${typeof window === "undefined" ? "" : window.location.search}`;
+
+  /** Where a version-changing press starts: on the entry as it stands, with
+   *  nothing typed left behind. */
+  async function settle(): Promise<Landed | null> {
+    if (draft.id === null || draft.versionId === null || dirty) return persistRef.current();
+    return { id: draft.id, versionId: draft.versionId };
+  }
+
   const persistRef = useRef(persist);
   persistRef.current = persist;
 
   /* Everything saves itself, three seconds after the typing stops — a draft
-     nobody has seen and a page a reader is on, the same way. An untitled entry
-     is the one exception: it has no name to make an address from, so nothing is
-     written until it has one. */
+     nobody has seen and a page a reader is on, the same way. An entry that has
+     never been saved and has no title is the one exception: there is no name to
+     make an address from, so nothing is written until there is one. An entry
+     that already exists has an address, so a version of it that starts on the
+     body and gets its title last saves from the first word. */
   useEffect(() => {
     if (snapshot === savedRef.current) return;
-    if (!sendingRef.current.title.trim()) return;
+    if (sendingRef.current.id === null && !sendingRef.current.title.trim()) return;
 
     const timer = setTimeout(() => void persistRef.current(), AUTOSAVE_MS);
     return () => clearTimeout(timer);
@@ -382,14 +428,90 @@ export default function Editor({ initial, live, slug }: Props) {
     }
   }
 
+  /* ---- versions ------------------------------------------------------------ */
+
+  /** Opening another version is a navigation: the page is mounted from the
+   *  version it shows, so there is a new one to mount. */
+  async function openVersion(n: number) {
+    if (busy) return;
+    if (dirty && (await persistRef.current()) === null) return;
+    router.push(`/admin/${spec.section}/${address.current}?v=${n}`);
+  }
+
+  /** Another go, started from the one on screen. A rewrite begins with what is
+   *  already there and takes out what it does not want, and the version it
+   *  began from stays exactly where it was, one press away. */
+  async function another() {
+    const at = await settle();
+    if (!at) return;
+
+    setBusy(true);
+    const result = await addVersion(spec.section, at.id, at.versionId);
+    setBusy(false);
+
+    if (!result.ok) return setError(result.error);
+    router.push(`/admin/${spec.section}/${address.current}?v=${result.n}`);
+  }
+
+  /** One version thrown away. Offered only where it is allowed, which is any
+   *  version but the one a reader is being shown: there is always a page behind
+   *  the address, and the last version of an entry is by definition the live
+   *  one. Deleting the entry itself is the other press, and says so. */
+  async function removeVersion() {
+    const at = await settle();
+    if (!at) return;
+
+    const mine = all.find((one) => one.id === at.versionId);
+    const to = all.find((one) => one.id === liveId);
+    if (!mine || !to) return;
+
+    if (
+      !window.confirm(
+        `Delete v${mine.n}? The ${spec.one} and its other versions stay. This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    const result = await deleteVersion(spec.section, at.id, at.versionId);
+    setBusy(false);
+
+    if (!result.ok) return setError(result.error);
+
+    /* Nothing is being typed into any more, so the way out is the live one. */
+    savedRef.current = snapshotOf(sendingRef.current);
+    router.push(`/admin/${spec.section}/${address.current}?v=${to.n}`);
+  }
+
+  /** The press that changes what is on the site. */
+  async function makeLive() {
+    const at = await settle();
+    if (!at) return;
+
+    setBusy(true);
+    const result = await setLiveVersion(spec.section, at.id, at.versionId);
+    setBusy(false);
+
+    if (!result.ok) return setError(result.error);
+    setLiveId(at.versionId);
+    setSavedAt(new Date());
+
+    /* A draft's address follows the live version's title, so this can move it. */
+    if (result.slug && result.slug !== address.current) {
+      address.current = result.slug;
+      window.history.replaceState(null, "", editorPath(result.slug));
+    }
+  }
+
   /* ---- the rest ------------------------------------------------------------ */
 
   async function togglePublished(next: boolean) {
-    const savedId = draft.id === null || dirty ? await persist() : draft.id;
-    if (savedId === null) return;
+    const at = await settle();
+    if (!at) return;
 
     setBusy(true);
-    const result = await setItemPublished(spec.section, savedId, next);
+    const result = await setItemPublished(spec.section, at.id, next);
     setBusy(false);
 
     if (!result.ok) return setError(result.error);
@@ -403,14 +525,10 @@ export default function Editor({ initial, live, slug }: Props) {
     setSavedAt(new Date());
   }
 
-  async function remove() {
-    if (draft.id === null) return router.push(`/admin/${spec.section}`);
-    if (!window.confirm(`Delete “${draft.title || "Untitled"}”? This cannot be undone.`)) return;
-    savedRef.current = snapshot; // stop the unload warning firing on the way out
-    setBusy(true);
-    await deleteItem(spec.section, draft.id);
-  }
-
+  /* The line says what is happening to what is being typed, and nothing else.
+     Whether a reader can see this is already on the press beside it: a button
+     offering to publish is a thing that is not published. Saying it twice was
+     saying it once too often. */
   const status = !ready
     ? "Loading the editor…"
     : error
@@ -423,9 +541,7 @@ export default function Editor({ initial, live, slug }: Props) {
             ? `Saved at ${savedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
             : draft.id === null
               ? "Not saved yet"
-              : published
-                ? "On the site"
-                : "Draft";
+              : "";
 
   /* Whatever a label prints under the title is set under the title: a company's
      period and role are typed there, and a note's date is picked there. */
@@ -462,6 +578,9 @@ export default function Editor({ initial, live, slug }: Props) {
 
   const kind = menu?.block?.tagName;
 
+  /* The version on screen, as the line names it. */
+  const mine = all.find((one) => one.id === draft.versionId);
+
   return (
     <>
       <div
@@ -481,7 +600,10 @@ export default function Editor({ initial, live, slug }: Props) {
                 region="title"
                 source={draft.title}
                 placeholder={spec.name}
-                focus={draft.id === null}
+                /* A page with nothing on it is a page waiting to be written
+                   into, whether it is a new entry or a new version of an old
+                   one, so the caret starts at the top of it. */
+                focus={blank}
                 onChange={(title) => set({ title })}
               />
             ),
@@ -571,6 +693,54 @@ export default function Editor({ initial, live, slug }: Props) {
       />
 
       <div className="adm-actions">
+        {/* Which version is being written, which one a reader gets, and the two
+            ways to start another. Nothing to name until the first save has made
+            a v1, so nothing is printed until then. */}
+        {all.length > 0 && (
+          <p className="adm-versions">
+            {all.map((one) => (
+              <button
+                key={one.id}
+                className={one.id === draft.versionId ? "adm-v on" : "adm-v"}
+                type="button"
+                data-version={one.n}
+                aria-current={one.id === draft.versionId ? "true" : undefined}
+                onClick={() => void openVersion(one.n)}
+                disabled={busy || !ready}
+              >
+                v{one.n}
+                {one.id === liveId && <span className="adm-vlive"> live</span>}
+              </button>
+            ))}
+
+            {/* One more, at the end of the row it belongs to, because that is
+                what it makes: a copy of the one being read, to write over. */}
+            <button
+              className="adm-v adm-vplus"
+              type="button"
+              aria-label={`Another version, starting from v${mine?.n ?? 1}`}
+              onClick={() => void another()}
+              disabled={busy || !ready}
+            >
+              +
+            </button>
+
+            {/* Only where it is allowed: any version but the one a reader is
+                being shown, which is also the only version an entry with one
+                version has. Nothing here deletes an entry. */}
+            {draft.versionId !== null && draft.versionId !== liveId && (
+              <button
+                className="adm-v adm-vgone"
+                type="button"
+                onClick={() => void removeVersion()}
+                disabled={busy || !ready}
+              >
+                Delete this version
+              </button>
+            )}
+          </p>
+        )}
+
         <p className={error ? "adm-status bad" : "adm-status"} role="status">
           {status}
         </p>
@@ -584,14 +754,21 @@ export default function Editor({ initial, live, slug }: Props) {
           {published ? "Unpublish" : "Publish"}
         </button>
 
-        <button
-          className="adm-btn quiet"
-          type="button"
-          onClick={() => void remove()}
-          disabled={busy || !ready}
-        >
-          Delete
-        </button>
+        {/* Only where it means something: the version on screen is not the one
+            a reader gets, and one press is the whole of changing that. */}
+        {draft.versionId !== null && draft.versionId !== liveId && (
+          <button
+            className="adm-btn"
+            type="button"
+            onClick={() => void makeLive()}
+            disabled={busy || !ready}
+          >
+            Make live
+          </button>
+        )}
+
+        {/* And nothing that deletes the entry. Unpublishing is how a thing comes
+            off the site, and it keeps it. */}
       </div>
 
       <Link className="more" href={`/admin/${spec.section}`}>

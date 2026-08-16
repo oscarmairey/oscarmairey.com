@@ -227,6 +227,68 @@
   color: var(--oxide);
 }
 
+/* ---- which version is being written ----------------------------------- */
+
+/* An entry can be written more than once, and only one of those is the one a
+   reader gets. Its own line above the bar, in the site's smallest size and the
+   grey the rest of the metadata is in: it is chrome, and it stays out of the
+   way until it is looked for. Text, no boxes — the two presses that matter
+   here are Publish and Make live, and they are the ones that look like
+   presses. */
+.adm-versions {
+  flex: 1 1 100%;
+  order: -2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.9rem;
+  font-size: var(--t-s);
+  color: var(--ink-3);
+}
+
+.adm-v {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color 120ms var(--ease);
+}
+
+.adm-v:hover:not(:disabled) {
+  color: var(--oxide);
+}
+
+.adm-v:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The one on screen, marked the way the nav marks the page you are on. */
+.adm-v.on {
+  color: var(--oxide);
+}
+
+/* And the one on the site, named rather than drawn. */
+.adm-vlive {
+  color: var(--ink-3);
+}
+
+/* One more, at the end of the row of numbers, because that is what it makes.
+   Widened a little so a thumb has something to land on without the line
+   growing a box around it. */
+.adm-vplus {
+  padding-inline: 0.2rem;
+  margin-inline: -0.2rem;
+}
+
+/* And the one destructive press here, pushed off to the far end, away from the
+   numbers a hand is moving between. */
+.adm-vgone {
+  margin-left: auto;
+}
+
 /* The way out of a list, and back to it from an editor. It lived in
    globals.css when the public pages had their own; they do not. */
 .more {

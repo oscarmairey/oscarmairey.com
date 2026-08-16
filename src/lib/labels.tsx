@@ -41,12 +41,27 @@ export type Item = {
   date: string;
 };
 
-/** What the editor reads: an item, plus the one thing only it cares about. */
+/** What the editor reads: an item, plus the one thing only it cares about. The
+ *  item half is the live version's, which is what a list is a list of. */
 export type Row = Item & { published: boolean };
 
-/** What the editor writes. `id` is null until the first save. */
+/** One of an entry's versions, as the selector names it: v1, v2, v3. */
+export type Version = { id: number; n: number };
+
+/** An entry open in the editor: a row, the version its text came from, the one
+ *  a reader gets, and every version there is to switch to. */
+export type Editing = Row & {
+  versionId: number;
+  liveVersionId: number;
+  versions: Version[];
+};
+
+/** What the editor writes. `id` is null until the first save, and `versionId`
+ *  with it: the version is named on every save so that a save composed before a
+ *  switch still lands in the version it was typed into. */
 export type Draft = {
   id: number | null;
+  versionId: number | null;
   section: Section;
   title: string;
   subtitle: string;
@@ -61,7 +76,7 @@ export type Draft = {
  *  edited where it is printed, and these are no exception: the editor hands the
  *  stamp an `edit` and gets back a region, or a date, in place. */
 type Field = {
-  key: keyof Omit<Draft, "id" | "section" | "title" | "subtitle" | "body">;
+  key: keyof Omit<Draft, "id" | "versionId" | "section" | "title" | "subtitle" | "body">;
   label: string;
   kind?: "date";
 };
@@ -164,6 +179,7 @@ export function isSection(value: string): value is Section {
 
 export const emptyDraft = (section: Section): Draft => ({
   id: null,
+  versionId: null,
   section,
   title: "",
   subtitle: "",
@@ -174,8 +190,9 @@ export const emptyDraft = (section: Section): Draft => ({
   date: "",
 });
 
-export const draftOf = (section: Section, row: Row): Draft => ({
+export const draftOf = (section: Section, row: Editing): Draft => ({
   id: row.id,
+  versionId: row.versionId,
   section,
   title: row.title,
   subtitle: row.subtitle,

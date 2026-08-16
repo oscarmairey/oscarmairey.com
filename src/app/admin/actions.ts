@@ -73,9 +73,10 @@ export async function signIn(_state: LoginState, form: FormData): Promise<LoginS
 
 /** The date comes back because publishing can create one: the server stamps a
  *  row the first time it goes live, and an editor still holding "" would wipe
- *  it on the next save. */
+ *  it on the next save. The version comes back for the same reason: the first
+ *  save of a new entry is also what makes its v1. */
 export type SaveResult =
-  | { ok: true; id: number; date: string; slug: string }
+  | { ok: true; id: number; versionId: number; date: string; slug: string }
   | { ok: false; error: string };
 
 export async function saveItem(draft: Draft): Promise<SaveResult> {
@@ -90,15 +91,28 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
   const title = draft.title.trim();
 
   try {
-    /* The slug is never typed. It follows the title while the entry is still
-       only Oscar's, and freezes the moment a reader can reach it: a published
-       address is a promise. */
-    const current = draft.id === null ? undefined : await store.getItem(spec.label, draft.id);
+    const current = draft.id === null ? undefined : await store.getEntry(spec.label, draft.id);
     if (draft.id !== null && !current) return { ok: false, error: "That entry is gone." };
 
-    const slug = current?.published
-      ? current.slug
-      : await store.freeSlug(spec.label, slugify(title) || current?.slug || spec.one, draft.id);
+    /* The version this save is for, named by the editor rather than looked up:
+       switching versions is a remount, and a save already in the air belongs to
+       the version it was typed into. Checked against the entry, because a
+       server action is a public endpoint. */
+    const version =
+      current && draft.versionId !== null
+        ? await store.getVersion(current.id, draft.versionId)
+        : undefined;
+    if (current && !version) return { ok: false, error: "That version is gone." };
+
+    /* The slug is never typed. It follows the title of the version a reader
+       would get, while the entry is still only Oscar's, and freezes the moment
+       a reader can reach it: a published address is a promise. Retyping a
+       version nobody is being shown moves nothing. */
+    const slug = !current
+      ? await store.freeSlug(spec.label, slugify(title) || spec.one, null)
+      : current.published || version!.id !== current.liveVersionId
+        ? current.slug
+        : await store.freeSlug(spec.label, slugify(title) || current.slug || spec.one, draft.id);
 
     const input: Draft = {
       ...draft,
@@ -107,15 +121,19 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
       subtitle: draft.subtitle.trim(),
       byline: draft.byline.trim(),
       period: draft.period.trim(),
-      /* Computed, not typed: it cannot disagree with what is written. */
+      /* Computed, not typed, and computed per version: two versions of a note
+         are two lengths, and each says its own. */
       readingTime: spec.label === "note" ? readingTime(draft.body) : "",
       date: DATE.test(draft.date) ? draft.date : "",
     };
 
-    const id = draft.id === null ? await store.createItem(slug, input) : draft.id;
-    if (draft.id !== null) await store.updateItem(id, slug, input);
+    if (!current) {
+      const made = await store.createItem(slug, input);
+      return { ok: true, id: made.id, versionId: made.versionId, date: input.date, slug };
+    }
 
-    if (current) await sweep(current.body, input.body);
+    await store.updateItem(current.id, version!.id, slug, input);
+    await sweep(version!.body, input.body);
 
     /* No revalidation here. A save happens every few seconds while Oscar is
        typing, and Next answers an action by re-rendering the page that called
@@ -124,7 +142,133 @@ export async function saveItem(draft: Draft): Promise<SaveResult> {
        are dynamic, they read on request, and the write already emptied the
        cache they read through. Publishing and deleting revalidate, because
        those are the moments a list changes. */
-    return { ok: true, id, date: input.date, slug };
+    return { ok: true, id: current.id, versionId: version!.id, date: input.date, slug };
+  } catch (error) {
+    if (store.isSlugTaken(error)) {
+      return { ok: false, error: `Two ${spec.plural.toLowerCase()} are fighting over one address.` };
+    }
+    return { ok: false, error: message(error) };
+  }
+}
+
+/* ---- versions ------------------------------------------------------------ */
+
+/** Another go at the same entry, starting from the one on screen: a rewrite
+ *  begins with what is already written, and what it does not keep it deletes.
+ *  It does not go live by being made. */
+export type VersionResult = { ok: true; id: number; n: number } | { ok: false; error: string };
+
+export async function addVersion(
+  section: string,
+  id: number,
+  from: number,
+): Promise<VersionResult> {
+  await requireSession();
+
+  if (!isSection(section)) return { ok: false, error: "Unknown kind of entry." };
+  if (!Number.isInteger(id) || !Number.isInteger(from)) {
+    return { ok: false, error: "That is not a version." };
+  }
+
+  try {
+    const entry = await store.getEntry(sections[section].label, id);
+    if (!entry) return { ok: false, error: "That entry is gone." };
+
+    const made = await store.addVersion(id, from);
+    if (!made) return { ok: false, error: "There is no such version to copy." };
+
+    return { ok: true, id: made.id, n: made.n };
+  } catch (error) {
+    return { ok: false, error: message(error) };
+  }
+}
+
+/** One version thrown away, and only one: the entry stays, its address stays,
+ *  and every other version of it stays. Never the version the site is showing —
+ *  a reader's page must always have words behind it — which also means the last
+ *  version of an entry cannot go this way. The whole entry is deleted by the
+ *  press that says so. */
+export async function deleteVersion(
+  section: string,
+  id: number,
+  versionId: number,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireSession();
+
+  if (!isSection(section)) return { ok: false, error: "Unknown kind of entry." };
+  if (!Number.isInteger(id) || !Number.isInteger(versionId)) {
+    return { ok: false, error: "That is not a version." };
+  }
+  const spec = sections[section];
+
+  try {
+    const entry = await store.getEntry(spec.label, id);
+    if (!entry) return { ok: false, error: "That entry is gone." };
+
+    const version = await store.getVersion(id, versionId);
+    if (!version) return { ok: false, error: "That version is gone." };
+
+    if (versionId === entry.liveVersionId) {
+      return {
+        ok: false,
+        error: `That is the version the site is showing. Make another one live first.`,
+      };
+    }
+
+    if (!(await store.deleteVersion(id, versionId))) {
+      return { ok: false, error: "That version did not go." };
+    }
+
+    /* What it referred to and nothing else does goes with it. */
+    await sweep(version.body, "");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: message(error) };
+  }
+}
+
+/** Which version a reader gets. A press of its own, weighed the same as
+ *  publishing, because it is the same kind of decision: it changes what is on
+ *  the site. Nothing else moves it — not saving, not making a newer one. */
+export async function setLiveVersion(
+  section: string,
+  id: number,
+  versionId: number,
+): Promise<SaveResult> {
+  await requireSession();
+
+  if (!isSection(section)) return { ok: false, error: "Unknown kind of entry." };
+  const spec = sections[section];
+
+  try {
+    const entry = await store.getEntry(spec.label, id);
+    if (!entry) return { ok: false, error: "That entry is gone." };
+
+    const version = await store.getVersion(id, versionId);
+    if (!version) return { ok: false, error: "That version is gone." };
+
+    await store.setLive(id, versionId);
+
+    /* The address follows the live version's title, and stops the day a reader
+       can reach it — the same rule as a save, applied at the other moment that
+       can change which title is the live one. */
+    let slug = entry.slug;
+    if (!entry.published) {
+      slug = await store.freeSlug(
+        spec.label,
+        slugify(version.title.trim()) || entry.slug || spec.one,
+        id,
+      );
+      if (slug !== entry.slug) await store.setSlug(id, slug);
+    }
+
+    /* Only when a reader is affected, which is also the only case where this is
+       safe: revalidating makes Next re-render the page that called the action,
+       and on a draft that is the editor at an address this press may have just
+       moved. Nothing public changes when nothing was public. */
+    if (entry.published) published();
+
+    return { ok: true, id, versionId, date: entry.date, slug };
   } catch (error) {
     if (store.isSlugTaken(error)) {
       return { ok: false, error: `Two ${spec.plural.toLowerCase()} are fighting over one address.` };
@@ -145,9 +289,15 @@ export async function setItemPublished(
   try {
     await store.setPublished(id, publish);
     /* Read back for the date: the first publish stamps a row that had none. */
-    const row = await store.getItem(sections[section].label, id);
+    const row = await store.getEntry(sections[section].label, id);
     published();
-    return { ok: true, id, date: row?.date ?? "", slug: row?.slug ?? "" };
+    return {
+      ok: true,
+      id,
+      versionId: row?.liveVersionId ?? 0,
+      date: row?.date ?? "",
+      slug: row?.slug ?? "",
+    };
   } catch (error) {
     return { ok: false, error: message(error) };
   }
@@ -187,15 +337,8 @@ export async function saveBio(value: string): Promise<{ ok: true } | { ok: false
   }
 }
 
-export async function deleteItem(section: string, id: number) {
-  await requireSession();
-
-  if (!isSection(section)) return;
-
-  const going = await store.getItem(sections[section].label, id);
-  await store.deleteItem(sections[section].label, id);
-  if (going) await sweep(going.body, "");
-  published();
-  revalidatePath(`/admin/${section}`);
-  redirect(`/admin/${section}`);
-}
+/* There is no way to delete an entry. Unpublishing takes it off the site and
+   keeps it, which is what taking something down actually means; a version that
+   is not the live one can be thrown away, and that is as much as anything here
+   destroys. The action that deleted a whole entry is gone rather than hidden,
+   so there is nothing left to call. */

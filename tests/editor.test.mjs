@@ -1,13 +1,14 @@
 import { deflateSync } from "node:zlib";
 
 /* The editor, driven the way Oscar drives it: a real browser, a real click, a
-   real keypress, a real file. Everything it makes, it deletes on the way out. */
+   real keypress, a real file. It leaves what it makes behind: nothing deletes an
+   entry, and the database is rebuilt from the migrations before every run. */
 
 /* Where this is allowed to run, and it is not negotiable.
  *
- *  The suite writes, publishes, unpublishes and deletes through the real
- *  editor. Pointed at the site Oscar uses, a mistargeted click is a piece of
- *  his writing gone. So it only ever talks to a server on the loopback that
+ *  The suite writes, publishes, unpublishes and throws versions away through
+ *  the real editor. Pointed at the site Oscar uses, a mistargeted click is a
+ *  piece of his writing gone. So it only ever talks to a server on the loopback that
  *  scripts/test.mjs started for it, against a database of its own — run it with
  *  `npm test`, never by hand against a host. */
 const BASE = process.env.TEST_BASE ?? "";
@@ -117,7 +118,13 @@ page.setDefaultTimeout(30000);
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-page.on("dialog", (d) => d.accept(d.type() === "prompt" ? "https://example.com" : undefined));
+/* Kept, because what a destructive press says before it acts is part of what it
+   does: with versions, "Delete" has to name how much it takes. */
+let asked = "";
+page.on("dialog", (d) => {
+  asked = d.message();
+  d.accept(d.type() === "prompt" ? "https://example.com" : undefined);
+});
 
 const text = (sel) => page.evaluate((s) => document.querySelector(s)?.textContent ?? null, sel);
 const status = () => text(".adm-status");
@@ -144,17 +151,22 @@ async function signIn() {
   }
 }
 
-async function typeInto(selector, string) {
+/** Types at the end of a region, or over the whole of it when asked: a rewrite
+ *  starts by taking out what was there. */
+async function typeInto(selector, string, over = false) {
   await page.click(selector);
-  await page.evaluate((s) => {
-    const el = document.querySelector(s);
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
-    const sel = getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }, selector);
+  await page.evaluate(
+    ([s, all]) => {
+      const el = document.querySelector(s);
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      if (!all) range.collapse(false);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    },
+    [selector, over],
+  );
   await page.keyboard.type(string, { delay: 25 });
 }
 
@@ -174,6 +186,21 @@ const saved = () =>
     null,
     { timeout: 20000 },
   );
+
+/** A figure is not editable, so a right click on it is not by itself a question
+ *  about it: the caret goes into its caption first, which is the editable part
+ *  of it and what the menu reads to know which block it was asked about. Asked
+ *  on the caption rather than on the picture, the menu also opens beside a line
+ *  rather than in the middle of a tall photograph, where reaching it would mean
+ *  a scroll, and a scroll is one of the things that closes it. */
+async function removeFirstImage() {
+  const cap = ".prose figure figcaption";
+  await page.click(cap);
+  await page.click(cap, { button: "right" });
+  await page.waitForSelector('.adm-menu button:text-is("Remove image")');
+  await page.click('.adm-menu button:text-is("Remove image")', { force: true });
+  await page.waitForTimeout(250);
+}
 
 /* The right click has to land inside whatever is selected: a browser clears a
    selection when the press falls outside it, which is not a bug to chase. */
@@ -461,18 +488,28 @@ async function run(section, one) {
     ok("the author is under the title", (await text("article .stamp")) === "An Author");
   }
 
-  /* ---- out again, and the file with it ------------------------------------ */
+  /* ---- nothing here deletes it, and the file goes when the writing does ---- */
 
   await page.goto(url, { waitUntil: "networkidle" });
   await settled();
-  await page.click('.adm-actions button:has-text("Delete")');
-  await page.waitForURL(`${BASE}/admin/${section}`, { timeout: 15000 });
-  ok("deletes", (await page.locator(".rows a", { hasText: title }).count()) === 0);
-  ok("the Return link is there", (await page.locator('.adm-buttons a:has-text("Return")').count()) === 1);
+  ok(
+    "there is no press that deletes the entry",
+    (await page.locator('.adm-actions button:has-text("Delete")').count()) === 0,
+  );
 
-  await page.waitForTimeout(300);
-  ok("the file went with it", (await page.request.get(BASE + src)).status() === 404);
-  if (big) ok("and so did the big one", (await page.request.get(BASE + big)).status() === 404);
+  /* An entry that stops mentioning a file takes the file with it, and a save is
+     the only moment that can happen now. */
+  for (let left = await page.locator(".prose figure").count(); left > 0; left -= 1) {
+    await removeFirstImage();
+  }
+  ok("the images come out of the body", (await page.locator(".prose figure").count()) === 0);
+  await saved();
+  await page.waitForTimeout(400);
+  ok("and the file goes with the mention of it", (await page.request.get(BASE + src)).status() === 404);
+  if (big) ok("and so does the big one", (await page.request.get(BASE + big)).status() === 404);
+
+  await page.goto(`${BASE}/admin/${section}`, { waitUntil: "networkidle" });
+  ok("the Return link is there", (await page.locator('.adm-buttons a:has-text("Return")').count()) === 1);
 }
 
 /** B1: publishing dates an entry that had no date. The editor has to take that
@@ -488,7 +525,6 @@ async function dateSurvivesPublishing() {
   await typeInto(FIRST, "Never given a date by hand.");
   await page.waitForFunction(() => /^Saved at/.test(document.querySelector(".adm-status")?.textContent ?? ""), null, { timeout: 15000 });
 
-  const url = page.url();
   ok("undated before publishing", (await text(".stamp"))?.startsWith("Undated"), await text(".stamp"));
 
   await page.click('.adm-actions button:text-is("Publish")');
@@ -502,11 +538,6 @@ async function dateSurvivesPublishing() {
   await page.reload({ waitUntil: "networkidle" });
   await settled();
   ok("the date survives the next save", (await text(".stamp")) === stamped, `${await text(".stamp")} vs ${stamped}`);
-
-  await page.goto(url, { waitUntil: "networkidle" });
-  await settled();
-  await page.click('.adm-actions button:has-text("Delete")');
-  await page.waitForURL(`${BASE}/admin/notes`, { timeout: 15000 });
 }
 
 /** The keys that decide what a block is, and the menu that decides the rest. */
@@ -652,7 +683,6 @@ async function blocksBehave() {
   }
 
   /* Through the database and out the other side. */
-  const editor = url();
   await saved();
   await page.reload({ waitUntil: "networkidle" });
   await settled();
@@ -674,11 +704,6 @@ async function blocksBehave() {
   ok("bold is on the page", (await page.locator("article .prose strong").count()) === 1);
   ok("italic is on the page", (await page.locator("article .prose em").count()) === 1);
   ok("the underline is on the page", (await page.locator("article .prose u").count()) === 1);
-
-  await page.goto(editor, { waitUntil: "networkidle" });
-  await settled();
-  await page.click('.adm-actions button:has-text("Delete")');
-  await page.waitForURL(`${BASE}/admin/notes`, { timeout: 15000 });
 }
 
 /** The order is Oscar's, and it is dragged. */
@@ -739,6 +764,244 @@ async function ordersByHand() {
   await saved();
   await page.goto(`${BASE}/admin/books`, { waitUntil: "networkidle" });
   ok("a new entry starts at the top", (await titles())[0] === fresh, (await titles()).slice(0, 2).join(" | "));
+}
+
+/** An entry written more than once, and the one version of it a reader gets.
+ *
+ *  The whole of the promise, in order: a version is its own page with its own
+ *  state; another one starts from the one on screen and leaves it where it was;
+ *  switching brings each back exactly as it was left; which one is on the site
+ *  is a press, not the newest and not the last one typed into; and a version
+ *  that nobody is being shown can be thrown away, while the entry itself never
+ *  can be. */
+async function versionsAreOscars() {
+  console.log("\nversions");
+
+  /* Two titles with no word in common, so "the page shows this one and not the
+     other" is a question either can answer. */
+  const stamp = Date.now();
+  const title = `Playwright versions ${stamp}`;
+  const second = `Playwright rewrite ${stamp}`;
+
+  const V = (n) => `.adm-v[data-version="${n}"]`;
+  const on = () => page.evaluate(() => document.querySelector(".adm-v.on")?.dataset.version ?? null);
+  const liveMark = () =>
+    page.evaluate(() => document.querySelector(".adm-v:has(.adm-vlive)")?.dataset.version ?? null);
+  const canMakeLive = () => page.locator('.adm-actions button:text-is("Make live")').count();
+  const canDeleteVersion = () =>
+    page.locator('.adm-versions button:text-is("Delete this version")').count();
+  const count = () => page.locator(".adm-v[data-version]").count();
+  const body = () => text(FIRST);
+
+  const openVersion = async (n) => {
+    await page.click(V(n));
+    await page.waitForFunction((s) => document.querySelector(s)?.classList.contains("on"), V(n), {
+      timeout: 20000,
+    });
+    await settled();
+  };
+
+  const madeLive = (n) =>
+    page.waitForFunction(
+      (want) => document.querySelector(".adm-v:has(.adm-vlive)")?.dataset.version === want,
+      String(n),
+      { timeout: 20000 },
+    );
+
+  /* ---- v1 ---------------------------------------------------------------- */
+
+  await page.goto(`${BASE}/admin/notes/new`, { waitUntil: "networkidle" });
+  await settled();
+  ok("a new entry has no versions to name", (await page.locator(".adm-versions").count()) === 0);
+
+  await typeInto('[data-region="title"]', title);
+  await typeInto(FIRST, "The first writing of it.");
+  await saved();
+
+  const editor = page.url().replace(/\?.*$/, "");
+
+  await page.waitForSelector(".adm-versions");
+  ok("the first save makes a v1", (await count()) === 1);
+  ok("and it is the live one", (await liveMark()) === "1");
+  ok("so there is nothing to make live", (await canMakeLive()) === 0);
+  ok("and nothing to delete, it being the live one", (await canDeleteVersion()) === 0);
+
+  /* An image, put in v1 and never taken out of it. */
+  await page.click(FIRST, { button: "right" });
+  await page.waitForSelector('.adm-menu button:text-is("Image")');
+  await page.click('.adm-menu button:text-is("Image")');
+  await page.setInputFiles(".adm-picker", { name: "Kept.png", mimeType: "image/png", buffer: PNG });
+  await page.waitForSelector(".prose figure img", { timeout: 15000 });
+  const kept = await page.getAttribute(".prose figure img", "src");
+  await saved();
+
+  /* ---- one more, started from this one ------------------------------------ */
+
+  await page.click(".adm-vplus");
+  await page.waitForURL(/\?v=2$/, { timeout: 20000 });
+  await settled();
+
+  ok("the plus starts from what is on screen", (await text('[data-region="title"]')) === title);
+  ok("body and all", ((await body()) ?? "").includes("first writing"));
+  ok("image and all", (await srcs()).includes(kept), (await srcs()).join(" "));
+  ok("it is the one being written", (await on()) === "2");
+  ok("v1 is still the one on the site", (await liveMark()) === "1");
+  ok("and now there is something to make live", (await canMakeLive()) === 1);
+
+  /* Written over, which is what a rewrite is. */
+  await removeFirstImage();
+  await typeInto('[data-region="title"]', second, true);
+  await typeInto(FIRST, "The second writing of it, which says something else.", true);
+  await saved();
+  ok("the reading time is this version's", ((await text(".stamp")) ?? "").includes(" min"));
+  ok("the image it did not keep is out of it", (await srcs()).length === 0);
+  await page.waitForTimeout(400);
+  ok(
+    "but the file stays, because v1 still refers to it",
+    (await page.request.get(BASE + kept)).status() === 200,
+  );
+
+  await page.reload({ waitUntil: "networkidle" });
+  await settled();
+  ok("v2 came back", (await text('[data-region="title"]')) === second);
+  ok("with its own body", ((await body()) ?? "").includes("second writing"));
+  ok("and the address still names it", /\?v=2$/.test(page.url()), page.url());
+
+  /* ---- and v1 is exactly where it was left -------------------------------- */
+
+  await openVersion(1);
+  ok("v1 is untouched", (await text('[data-region="title"]')) === title);
+  ok("body and all", ((await body()) ?? "").includes("first writing"));
+  ok("image and all", (await srcs()).includes(kept), (await srcs()).join(" "));
+  ok("and nothing to make live, being live", (await canMakeLive()) === 0);
+
+  await openVersion(2);
+  ok("and back to v2", (await text('[data-region="title"]')) === second);
+
+  /* ---- what a reader gets is a press, not the newest ---------------------- */
+
+  await page.click('.adm-actions button:text-is("Publish")');
+  await page.waitForSelector('.adm-actions button:text-is("Unpublish")', { timeout: 20000 });
+
+  const article = async (path) => {
+    await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
+    return page.evaluate(() => document.querySelector("article")?.textContent ?? "");
+  };
+  const get = async (path) => (await page.request.get(BASE + path)).text();
+
+  const slug = editor.replace(`${BASE}/admin/notes/`, "");
+  const page_ = `/notes/${slug}`;
+
+  let shown = await article(page_);
+  ok(
+    "publishing puts the live version up, not the one being written",
+    shown.includes(title) && !shown.includes(second),
+    shown.slice(0, 80),
+  );
+  ok("and the live one is what the map says", (await get("/llms.txt")).includes(title));
+  ok("and the markdown", (await get(`/md/notes/${slug}`)).startsWith(`# ${title}`));
+  ok("and the feed", (await get("/feed.xml")).includes(title));
+
+  /* ---- now the press ------------------------------------------------------ */
+
+  await page.goto(`${editor}?v=2`, { waitUntil: "networkidle" });
+  await settled();
+  await page.click('.adm-actions button:text-is("Make live")');
+  await madeLive(2);
+  ok("the press moves the mark", (await liveMark()) === "2");
+  ok("and takes itself away", (await canMakeLive()) === 0);
+  ok("and the live one cannot be deleted", (await canDeleteVersion()) === 0);
+
+  shown = await article(page_);
+  ok("the site shows v2", shown.includes(second) && !shown.includes(title), shown.slice(0, 80));
+  ok("the map shows v2", (await get("/llms.txt")).includes(second));
+  ok("the whole of it shows v2", (await get("/llms-full.txt")).includes("second writing of it"));
+  ok("the markdown shows v2", (await get(`/md/notes/${slug}`)).startsWith(`# ${second}`));
+  ok("the feed shows v2", (await get("/feed.xml")).includes(second));
+  ok("and the address never moved", (await get("/llms.txt")).includes(page_), page_);
+
+  /* And v1 is still there to be opened, which is the point of all of it. */
+  await page.goto(`${editor}?v=1`, { waitUntil: "networkidle" });
+  await settled();
+  ok("v1 is still there to open", (await text('[data-region="title"]')) === title);
+  ok("with its body", ((await body()) ?? "").includes("first writing"));
+
+  /* ---- one version thrown away, and only that ----------------------------- */
+
+  await page.click(".adm-vplus");
+  await page.waitForURL(/\?v=3$/, { timeout: 20000 });
+  await settled();
+  ok("a third, started from v1", (await text('[data-region="title"]')) === title);
+  ok("image and all", (await srcs()).includes(kept));
+  ok("and it can be deleted, not being live", (await canDeleteVersion()) === 1);
+
+  await openVersion(2);
+  ok("the live one still cannot", (await canDeleteVersion()) === 0);
+
+  await openVersion(3);
+  await page.click('.adm-versions button:text-is("Delete this version")');
+  await page.waitForURL(/\?v=2$/, { timeout: 20000 });
+  await settled();
+  ok("it says the rest stays", /other versions stay/.test(asked), asked);
+  ok("v3 is gone", (await page.locator('.adm-v[data-version="3"]').count()) === 0);
+  ok("v1 and v2 are not", (await count()) === 2);
+  ok("and it lands on the live one", (await on()) === "2");
+
+  ok("the entry is still there", (await page.request.get(`${editor}?v=1`)).status() === 200);
+  shown = await article(page_);
+  ok("and the site never noticed", shown.includes(second), shown.slice(0, 60));
+  ok("the file v1 still uses is still there", (await page.request.get(BASE + kept)).status() === 200);
+
+  await page.goto(`${editor}?v=3`, { waitUntil: "networkidle" });
+  await settled();
+  ok("a version that is gone falls back to the live one", (await on()) === "2");
+
+  /* ---- back again, and back once more ------------------------------------- */
+
+  await openVersion(1);
+  await page.click('.adm-actions button:text-is("Make live")');
+  await madeLive(1);
+  shown = await article(page_);
+  ok("the site flips back to v1", shown.includes(title) && !shown.includes(second), shown.slice(0, 80));
+
+  await page.goto(`${editor}?v=2`, { waitUntil: "networkidle" });
+  await settled();
+  await page.click('.adm-actions button:text-is("Make live")');
+  await madeLive(2);
+  shown = await article(page_);
+  ok("and forward again", shown.includes(second), shown.slice(0, 60));
+
+  /* ---- the last one standing is the live one, and it stays ---------------- */
+
+  await page.goto(`${editor}?v=1`, { waitUntil: "networkidle" });
+  await settled();
+  await page.click('.adm-versions button:text-is("Delete this version")');
+  await page.waitForURL(/\?v=2$/, { timeout: 20000 });
+  await settled();
+  ok("the one before last can go", (await count()) === 1);
+  ok("what is left is the live one", (await liveMark()) === "2");
+  ok("and it cannot be thrown away", (await canDeleteVersion()) === 0);
+  await page.waitForTimeout(400);
+  ok(
+    "the file no version refers to any more went with it",
+    (await page.request.get(BASE + kept)).status() === 404,
+  );
+
+  /* ---- and off the site, which is as far as anything goes ----------------- */
+
+  ok(
+    "there is no press that deletes the entry",
+    (await page.locator('.adm-actions button:has-text("Delete")').count()) === 0,
+  );
+  ok("nor a word about whether it is live", (await status()) !== "On the site", await status());
+
+  await page.click('.adm-actions button:text-is("Unpublish")');
+  await page.waitForSelector('.adm-actions button:text-is("Publish")', { timeout: 20000 });
+  await page.goto(`${BASE}/notes`, { waitUntil: "networkidle" });
+  ok(
+    "unpublishing still takes the whole entry off",
+    (await page.locator(".rows a", { hasText: second }).count()) === 0,
+  );
 }
 
 /** What a machine reading the site on somebody's behalf is given. */
@@ -835,6 +1098,7 @@ for (const [section, one] of [["notes", "note"], ["books", "book"], ["companies"
 if (!process.env.ONLY) await dateSurvivesPublishing();
 if (!process.env.ONLY || process.env.ONLY === "blocks") await blocksBehave();
 if (!process.env.ONLY || process.env.ONLY === "ordering") await ordersByHand();
+if (!process.env.ONLY || process.env.ONLY === "versions") await versionsAreOscars();
 if (!process.env.ONLY || process.env.ONLY === "machines") await machinesCanRead();
 
 console.log(`\npage errors: ${errors.length}`);

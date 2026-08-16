@@ -49,11 +49,32 @@ editor. Adding a fourth label is a row in `src/lib/labels.tsx` and three files.
 | `/companies/[slug]` | One company |
 
 Everything the site lists lives in one Postgres table, `writings`, with a `label` column
-constrained to `note`, `book` or `company`. The columns are flat: `title`, `subtitle` (the
-one line the lists print), `byline` (a book's author, a company's role), `body`, `period`,
-`reading_time`, `published`, `published_at`, `created_at`. Everything starts as a draft,
-whatever its label, and is published by a press. `url` is still in the table and is read by
-nothing: a company's link left the site and the one row that had one kept it.
+constrained to `note`, `book` or `company`. What a row holds is what makes it that entry and
+nothing that is written in it: `slug`, `published`, `published_at`, `position`, `created_at`,
+and `live_version_id`. Everything starts as a draft, whatever its label, and is published by
+a press. `url` is still in the table and is read by nothing: a company's link left the site
+and the one row that had one kept it.
+
+**An entry can be written more than once.** What it says is a version of it, in
+`writings_versions`: `entry_id`, `n` (v1, v2, v3, per entry, never reused), then `title`,
+`subtitle` (the one line the lists print), `byline` (a book's author, a company's role),
+`body`, `period` and `reading_time`, which is derived per version because two versions are
+two lengths. Exactly one version is live, and the live one is the only thing a reader ever
+sees — the page, the home page, the lists, the feed, the sitemap, `llms.txt`, `/md/`. Which
+one that is, is a press of its own, weighed the same as Publish: not the newest, not the one
+last typed into. Every public read is one inner join to `live_version_id` and knows nothing
+about the rest.
+
+Publishing stays the entry's, and so does the address: the slug follows the live version's
+title while nobody can reach the entry, and freezes at the first publish. Retyping a version
+that is not live moves nothing.
+
+**Nothing deletes an entry.** Unpublishing takes it off the site and keeps it, which is what
+taking something down means; there is no press, no server action and no query that removes a
+row from `writings`. A version that is not the live one can be thrown away, which is as much
+as anything here destroys — and never the live one, a rule the SQL enforces rather than the
+browser, so the address always has words behind it. An entry with one version has only its
+live one, so it cannot be emptied.
 
 Every list is ordered by hand: a `position` column, lowest first, dragged into place in the
 editor and read the same way by the site. It was derived from dates once; the record is not
@@ -92,8 +113,17 @@ region's content exactly once. The stored format never changes.
 Whatever the page prints is typed on the page, in the place it prints. A company's period
 and role are the stamp under its name, a book's author is the stamp under its title, and a
 note's date is picked in the stamp where it is read. There is no metadata row anywhere and
-no field that is not part of the page. A draft saves itself as it is typed; anything a
-reader can already reach saves on a deliberate press, and so does publishing it.
+no field that is not part of the page. Everything saves itself three seconds after the
+typing stops, a draft and a page a reader is on alike, and the save names the version it was
+typed into, so one composed just before a switch still lands where it was written.
+
+Above the bar, one grey line names the versions: `v1 v2 live v3`, the one on screen in
+oxide the way the nav marks the page you are on, the live one carrying the word `live`, and
+a `+` at the end that copies the version on screen into a new one to write over. A version
+that is not live carries a `Delete this version` at the far end of that line. `Make live`
+appears beside `Publish` only when the version on screen is not the one readers get, which
+is exactly when it means something. The bar says whether a save is in flight and nothing
+else: whether a reader can see this is already on the button offering to publish it.
 
 ## Design system
 
@@ -225,9 +255,10 @@ its animation survives, an image already inside that and already webp or avif is
 is, and a re-encode that came out no smaller loses to the original. What arrives is what is
 stored, up to 8 MB, in one of png, jpeg, webp, gif or avif. The size the browser measured is
 baked into the name
-(`stem-tag-1200x800.png`) so a page can reserve the box before the bytes arrive. An entry
-that stops referring to a file takes it with it, on save and on delete, unless another entry
-still refers to it.
+(`stem-tag-1200x800.png`) so a page can reserve the box before the bytes arrive. A version
+that stops referring to a file takes it with it, on save and when the version itself is
+thrown away, unless some other version of some other entry still refers to it — a picture
+only the version nobody is being shown mentions is still mentioned, and stays.
 
 ## Stack
 

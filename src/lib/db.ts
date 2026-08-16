@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import type { QueryResultRow } from "pg";
+import type { PoolClient, QueryResultRow } from "pg";
 
 /** One pool for the process, kept on globalThis so the dev server's hot reload
  *  does not open a new one on every edit.
@@ -48,4 +48,27 @@ export async function queryOne<T extends QueryResultRow>(
 ): Promise<T | undefined> {
   const rows = await query<T>(text, params);
   return rows[0];
+}
+
+/** Several statements, or none of them.
+ *
+ *  Only the editor uses this, and only where one write touches both tables: an
+ *  entry and the version it says something in are two rows, and half of that
+ *  pair is not a thing the site should ever hold. Reads stay on the pool, which
+ *  is one statement each and needs no client of its own. */
+export async function transact<T>(run: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await run(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    /* The rollback is best effort: a connection that has already gone cannot be
+       told anything, and the error worth reporting is the first one. */
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
