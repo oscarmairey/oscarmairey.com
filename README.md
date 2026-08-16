@@ -51,10 +51,22 @@ afterwards:
 | | |
 |---|---|
 | database | `oscarmairey_test`, dropped and re-migrated before every run |
-| build | `.next-test`, so the dev server on 3101 is left alone |
+| build | `.next-test`, kept between runs and rebuilt only when the code changed |
 | uploads | `.test/uploads`, wiped with the run |
 | password | invented per run, unrelated to the real one |
 | port | 3102 on the loopback, with no proxy in front of it |
+
+It is also a guest on the machine. This box has four cores and is already
+running the dev server, the live site, Postgres and an editor, so the suite
+builds once and reuses that build — keyed on HEAD plus every uncommitted change
+that could alter it — runs the build and the server at the lowest priority the
+scheduler offers, holds the build to one worker and a 1 GB heap, keeps
+Playwright to a single browser with one page and one flow at a time, and
+refuses to start at all if less than 1.5 GB of memory is available.
+
+Building once rather than compiling on demand took a full run from about six
+minutes to a little over two, and left 2.7 GB free at its lowest point where
+the old one left 1.4 GB. A run that changes no code pays no build at all.
 
 Because the database is rebuilt from the migrations each time, the suite starts
 from the same content on every run and has nothing to clean up. The suite

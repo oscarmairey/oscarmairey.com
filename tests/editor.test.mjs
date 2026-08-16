@@ -35,6 +35,17 @@ if (!PASSWORD) {
    the browser is even installed. */
 const { chromium } = await import("playwright");
 
+/* One browser, one context, one page, one flow at a time — the machine this
+   runs on is somebody's desk. */
+const LEAN = [
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--disable-extensions",
+  "--disable-background-networking",
+  "--renderer-process-limit=1",
+  "--js-flags=--max-old-space-size=512",
+];
+
 /* A big PNG, built here rather than carried around: 3000x2000 of pattern, which
    is what a photograph off a camera looks like to an uploader. */
 const CRC = Array.from({ length: 256 }, (_, n) => {
@@ -94,7 +105,7 @@ const ok = (name, pass, detail = "") => {
   if (!pass) failures += 1;
 };
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ args: LEAN });
 const context = await browser.newContext();
 const page = await context.newPage();
 
