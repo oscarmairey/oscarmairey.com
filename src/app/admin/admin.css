@@ -283,10 +283,51 @@
   margin-inline: -0.2rem;
 }
 
+/* A version can be called something, and it is renamed where it is read: the
+   label becomes the field, in the same place, at the same size, with the caret
+   in the colour every other caret in the editor is. No box, because a box here
+   would be the only one on the line. */
+.adm-vname {
+  min-width: 4rem;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule-firm);
+  background: none;
+  font: inherit;
+  font-size: inherit;
+  color: var(--oxide);
+  caret-color: var(--oxide);
+}
+
+.adm-vname:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom-color: var(--oxide);
+}
+
+.adm-vname::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
 /* And the one destructive press here, pushed off to the far end, away from the
-   numbers a hand is moving between. */
+   numbers a hand is moving between.
+
+   A bin, drawn as a hairline: the same weight as every rule on the site, square
+   ended and mitred, because the radius is zero everywhere. The padding is the
+   part a thumb aims at and is pulled back out of the line again, so a
+   comfortable target costs the row no height. */
 .adm-vgone {
-  margin-left: auto;
+  display: inline-flex;
+  align-self: center;
+  margin: -0.5rem -0.5rem -0.5rem auto;
+  padding: 0.5rem;
+  color: var(--ink-3);
+}
+
+.adm-vgone svg {
+  display: block;
+  shape-rendering: geometricPrecision;
 }
 
 /* The way out of a list, and back to it from an editor. It lived in

@@ -45,8 +45,12 @@ export type Item = {
  *  item half is the live version's, which is what a list is a list of. */
 export type Row = Item & { published: boolean };
 
-/** One of an entry's versions, as the selector names it: v1, v2, v3. */
-export type Version = { id: number; n: number };
+/** One of an entry's versions, as the selector names it.
+ *
+ *  `n` is the identity: it is what the address asks for, it is handed out in
+ *  order and never handed out twice. `name` is what Oscar calls it, which may
+ *  be nothing, in which case the selector says vN. */
+export type Version = { id: number; n: number; name: string };
 
 /** An entry open in the editor: a row, the version its text came from, the one
  *  a reader gets, and every version there is to switch to. */

@@ -790,8 +790,8 @@ async function versionsAreOscars() {
   const liveMark = () =>
     page.evaluate(() => document.querySelector(".adm-v:has(.adm-vlive)")?.dataset.version ?? null);
   const canMakeLive = () => page.locator('.adm-actions button:text-is("Make live")').count();
-  const canDeleteVersion = () =>
-    page.locator('.adm-versions button:text-is("Delete this version")').count();
+  const BIN = '.adm-versions button[aria-label="Delete this version"]';
+  const canDeleteVersion = () => page.locator(BIN).count();
   const count = () => page.locator(".adm-v[data-version]").count();
   const body = () => text(FIRST);
 
@@ -928,6 +928,76 @@ async function versionsAreOscars() {
   ok("v1 is still there to open", (await text('[data-region="title"]')) === title);
   ok("with its body", ((await body()) ?? "").includes("first writing"));
 
+
+  /* ---- what a version is called ------------------------------------------- */
+
+  /* A name is only ever given to the version on screen, in the label it already
+     carries: there is nowhere else on the line it could be typed. */
+  const label = (n) => text(V(n));
+  const named = async (n, to, becomes) => {
+    await page.dblclick(V(n));
+    await page.waitForSelector(".adm-vname");
+    await page.fill(".adm-vname", to);
+    await page.keyboard.press("Enter");
+    await page.waitForSelector(".adm-vname", { state: "detached", timeout: 15000 });
+    /* Swallowed on purpose: an assertion that says what the line reads is worth
+       more here than a stack trace. */
+    await page
+      .waitForFunction(
+        ([sel, want]) => (document.querySelector(sel)?.textContent ?? "").startsWith(want),
+        [V(n), becomes],
+        { timeout: 15000 },
+      )
+      .catch(() => {});
+  };
+
+  await openVersion(2);
+  ok("a version is its number until it is called something", (await label(2))?.startsWith("v2"), await label(2));
+
+  await named(2, "short pitch", "short pitch");
+  ok("the label becomes the name", (await label(2))?.startsWith("short pitch"), await label(2));
+  ok("and the live mark is still with it", ((await label(2)) ?? "").includes("live"), await label(2));
+  ok("while v1 is still v1", (await label(1))?.startsWith("v1"), await label(1));
+
+  await page.reload({ waitUntil: "networkidle" });
+  await settled();
+  ok("the name survives a reload", (await label(2))?.startsWith("short pitch"), await label(2));
+  ok("and the address is still the number", /\?v=2$/.test(page.url()), page.url());
+
+  await openVersion(1);
+  await named(1, "long form", "long form");
+  ok("both are named now",
+     (await label(1))?.startsWith("long form") && (await label(2))?.startsWith("short pitch"),
+     `${await label(1)} | ${await label(2)}`);
+
+  /* And a name taken away is a version that goes back to being a number. */
+  await named(1, "   ", "v1");
+  ok("an empty name goes back to the number", (await label(1))?.startsWith("v1"), await label(1));
+  await page.reload({ waitUntil: "networkidle" });
+  await settled();
+  ok("and that survives too", (await label(1))?.startsWith("v1"), await label(1));
+  ok("while the other keeps its name", (await label(2))?.startsWith("short pitch"), await label(2));
+
+  /* ---- the press that deletes one is a drawing, not a sentence ------------- */
+
+  ok("the bin is on a version that is not live", (await canDeleteVersion()) === 1);
+  const bin = await page.evaluate((sel) => {
+    const svg = document.querySelector(`${sel} svg`);
+    return svg && { fill: svg.getAttribute("fill"), stroke: svg.getAttribute("stroke") };
+  }, BIN);
+  ok("drawn as a hairline with nothing filled in",
+     bin?.fill === "none" && bin?.stroke === "currentColor", JSON.stringify(bin));
+  const target = await page.locator(BIN).boundingBox();
+  ok("with room for a thumb around it", target.width >= 28 && target.height >= 28, JSON.stringify(target));
+  ok("and it says what it is", (await page.getAttribute(BIN, "aria-label")) === "Delete this version");
+  ok("with no word on the line", !((await text(".adm-versions")) ?? "").includes("Delete"));
+
+  await openVersion(2);
+  ok("never on the one the site is showing", (await canDeleteVersion()) === 0);
+
+  /* Back to v1, which is where the rest of this picks up. */
+  await openVersion(1);
+
   /* ---- one version thrown away, and only that ----------------------------- */
 
   await page.click(".adm-vplus");
@@ -941,7 +1011,7 @@ async function versionsAreOscars() {
   ok("the live one still cannot", (await canDeleteVersion()) === 0);
 
   await openVersion(3);
-  await page.click('.adm-versions button:text-is("Delete this version")');
+  await page.click(BIN);
   await page.waitForURL(/\?v=2$/, { timeout: 20000 });
   await settled();
   ok("it says the rest stays", /other versions stay/.test(asked), asked);
@@ -977,7 +1047,7 @@ async function versionsAreOscars() {
 
   await page.goto(`${editor}?v=1`, { waitUntil: "networkidle" });
   await settled();
-  await page.click('.adm-versions button:text-is("Delete this version")');
+  await page.click(BIN);
   await page.waitForURL(/\?v=2$/, { timeout: 20000 });
   await settled();
   ok("the one before last can go", (await count()) === 1);

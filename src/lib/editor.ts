@@ -46,6 +46,7 @@ const ENTRY = `
 const CONTENT = `
   id::int AS id,
   n::int AS n,
+  name,
   title,
   subtitle,
   byline,
@@ -106,7 +107,7 @@ export async function openBySlug(
     date: entry.date,
     liveVersionId: entry.liveVersionId,
     versionId: open.id,
-    versions: all.map(({ id, n: number }) => ({ id, n: number })),
+    versions: all.map(({ id, n: number, name }) => ({ id, n: number, name })),
     title: open.title,
     subtitle: open.subtitle,
     byline: open.byline,
@@ -227,9 +228,25 @@ export async function addVersion(entryId: number, from: number): Promise<Version
        (entry_id, n, title, subtitle, byline, body, period, reading_time)
      SELECT $1, ${next}, title, subtitle, byline, body, period, reading_time
      FROM writings_versions WHERE entry_id = $1 AND id = $2
-     RETURNING id::int AS id, n::int AS n`,
+     RETURNING id::int AS id, n::int AS n, name`,
     [entryId, from],
   );
+}
+
+/** What Oscar calls a version. Nothing reads it but the selector, so nothing
+ *  public can go stale behind it and there is no cache to empty. */
+export async function setVersionName(
+  entryId: number,
+  versionId: number,
+  name: string,
+): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    `UPDATE writings_versions SET name = $3, updated_at = now()
+     WHERE entry_id = $1 AND id = $2
+     RETURNING id::int AS id`,
+    [entryId, versionId, name],
+  );
+  return rows.length > 0;
 }
 
 /** One version, thrown away, and the entry left where it was.

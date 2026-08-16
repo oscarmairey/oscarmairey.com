@@ -8,7 +8,14 @@ import { lastNote, parseBody, readingTime, serializeBlocks, type Block } from "@
 import { formatDay } from "@/lib/format";
 import { itemOf, sections, type Draft, type EditField, type Version } from "@/lib/labels";
 import { ACCEPT, images, prepare } from "@/lib/media";
-import { addVersion, deleteVersion, saveItem, setItemPublished, setLiveVersion } from "./actions";
+import {
+  addVersion,
+  deleteVersion,
+  renameVersion,
+  saveItem,
+  setItemPublished,
+  setLiveVersion,
+} from "./actions";
 import { Body, Region, blocksFromDom, caretInto, figureHtml, listFrom, listInto } from "./editable";
 
 /** The editor is the page. There is no form and no preview: what is on screen
@@ -70,6 +77,10 @@ export default function Editor({ initial, live, slug, versions, liveVersionId }:
      re-rendered — the editor stays where it is, with what is in it. */
   const [all, setAll] = useState(versions);
   const [liveId, setLiveId] = useState(liveVersionId);
+
+  /* Renaming the version on screen: the label becomes a field where it sits. */
+  const [naming, setNaming] = useState(false);
+  const [called, setCalled] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -134,7 +145,7 @@ export default function Editor({ initial, live, slug, versions, liveVersionId }:
 
       /* The first save of a new entry is also what makes its v1, and the line
          that names the versions has had nothing to name until now. */
-      setAll((was) => (was.length > 0 ? was : [{ id: result.versionId, n: 1 }]));
+      setAll((was) => (was.length > 0 ? was : [{ id: result.versionId, n: 1, name: "" }]));
       setLiveId((was) => was || result.versionId);
 
       /* A draft's slug follows its title, and a new entry has none until the
@@ -432,9 +443,60 @@ export default function Editor({ initial, live, slug, versions, liveVersionId }:
   /** Opening another version is a navigation: the page is mounted from the
    *  version it shows, so there is a new one to mount. */
   async function openVersion(n: number) {
-    if (busy) return;
+    if (busy || n === mine?.n) return;
     if (dirty && (await persistRef.current()) === null) return;
     router.push(`/admin/${spec.section}/${address.current}?v=${n}`);
+  }
+
+  /* ---- what a version is called -------------------------------------------- */
+
+  /** A name is Oscar's shorthand for a version — "short pitch", "long form" —
+   *  and only the selector ever reads it. The number underneath does not move,
+   *  so an address is not a thing a rename can break, and a name taken away is
+   *  a version that goes back to being vN. */
+  function startNaming(one: Version) {
+    if (one.id !== draft.versionId || busy || !ready) return;
+    setCalled(one.name);
+    setNaming(true);
+  }
+
+  /* A thumb has no second click, so it holds the label down instead. */
+  const press = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loosed = () => {
+    if (press.current) clearTimeout(press.current);
+    press.current = null;
+  };
+  function held(one: Version) {
+    loosed();
+    press.current = setTimeout(() => startNaming(one), 550);
+  }
+  useEffect(() => loosed, []);
+
+  async function rename(one: Version) {
+    setNaming(false);
+
+    /* Tidied the same way the server tidies it, so what is shown at once is
+       what comes back a moment later. */
+    const to = called.replace(/\s+/g, " ").trim().slice(0, 40);
+    if (draft.id === null || to === one.name) return;
+
+    /* On the line before the round trip: it is Oscar's own label, he has just
+       typed it, and a name that appears when the network gets round to it is a
+       name that feels like it did not take. Put back if the server says no. */
+    const label = (name: string) =>
+      setAll((was) => was.map((v) => (v.id === one.id ? { ...v, name } : v)));
+
+    label(to);
+    setBusy(true);
+    const result = await renameVersion(spec.section, draft.id, one.id, to);
+    setBusy(false);
+
+    if (!result.ok) {
+      label(one.name);
+      return setError(result.error);
+    }
+    label(result.name);
+    setSavedAt(new Date());
   }
 
   /** Another go, started from the one on screen. A rewrite begins with what is
@@ -464,9 +526,10 @@ export default function Editor({ initial, live, slug, versions, liveVersionId }:
     const to = all.find((one) => one.id === liveId);
     if (!mine || !to) return;
 
+    const it = mine.name || `v${mine.n}`;
     if (
       !window.confirm(
-        `Delete v${mine.n}? The ${spec.one} and its other versions stay. This cannot be undone.`,
+        `Delete ${it}? The ${spec.one} and its other versions stay. This cannot be undone.`,
       )
     ) {
       return;
@@ -697,27 +760,59 @@ export default function Editor({ initial, live, slug, versions, liveVersionId }:
             a v1, so nothing is printed until then. */}
         {all.length > 0 && (
           <p className="adm-versions">
-            {all.map((one) => (
-              <button
-                key={one.id}
-                className={one.id === draft.versionId ? "adm-v on" : "adm-v"}
-                type="button"
-                data-version={one.n}
-                aria-current={one.id === draft.versionId ? "true" : undefined}
-                onClick={() => void openVersion(one.n)}
-                disabled={busy || !ready}
-              >
-                v{one.n}
-                {one.id === liveId && <span className="adm-vlive"> live</span>}
-              </button>
-            ))}
+            {all.map((one) =>
+              /* The one being written, being renamed: the label becomes the
+                 field, in the same place, at the same size. */
+              naming && one.id === draft.versionId ? (
+                <input
+                  key={one.id}
+                  className="adm-v on adm-vname"
+                  type="text"
+                  autoFocus
+                  size={Math.max(6, called.length + 1)}
+                  value={called}
+                  placeholder={`v${one.n}`}
+                  aria-label={`Name for v${one.n}`}
+                  onChange={(event) => setCalled(event.target.value)}
+                  onBlur={() => void rename(one)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Escape") {
+                      setCalled(one.name);
+                      setNaming(false);
+                    }
+                  }}
+                />
+              ) : (
+                <button
+                  key={one.id}
+                  className={one.id === draft.versionId ? "adm-v on" : "adm-v"}
+                  type="button"
+                  data-version={one.n}
+                  aria-current={one.id === draft.versionId ? "true" : undefined}
+                  onClick={() => void openVersion(one.n)}
+                  /* The one already open has nowhere to go, so the gesture on
+                     it is the one that renames it — twice with a mouse, held
+                     down with a thumb. */
+                  onDoubleClick={() => startNaming(one)}
+                  onPointerDown={() => held(one)}
+                  onPointerUp={loosed}
+                  onPointerLeave={loosed}
+                  onPointerCancel={loosed}
+                  disabled={busy || !ready}
+                >
+                  {one.name || `v${one.n}`}
+                  {one.id === liveId && <span className="adm-vlive"> live</span>}
+                </button>
+              ),
+            )}
 
             {/* One more, at the end of the row it belongs to, because that is
                 what it makes: a copy of the one being read, to write over. */}
             <button
               className="adm-v adm-vplus"
               type="button"
-              aria-label={`Another version, starting from v${mine?.n ?? 1}`}
+              aria-label={`Another version, starting from ${mine ? mine.name || `v${mine.n}` : "this one"}`}
               onClick={() => void another()}
               disabled={busy || !ready}
             >
@@ -731,10 +826,30 @@ export default function Editor({ initial, live, slug, versions, liveVersionId }:
               <button
                 className="adm-v adm-vgone"
                 type="button"
+                aria-label="Delete this version"
                 onClick={() => void removeVersion()}
                 disabled={busy || !ready}
               >
-                Delete this version
+                {/* Drawn here rather than fetched: there is no icon font in
+                    this stack and there is not going to be one. A hairline,
+                    the weight of every other line on the site, with square
+                    ends and mitred corners because the radius is zero
+                    everywhere. */}
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M2.5 4.5h11" />
+                  <path d="M6.5 4.5V2.5h3v2" />
+                  <path d="M4 4.5l.6 9h6.8l.6-9" />
+                  <path d="M6.75 6.9v4.4M9.25 6.9v4.4" />
+                </svg>
               </button>
             )}
           </p>

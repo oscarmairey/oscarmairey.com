@@ -192,11 +192,14 @@ down: nothing deletes an entry.
 An entry can be written more than once. The grey line above the bar names its
 versions — `v1 v2 live v3` — and the `+` at the end of them copies the one on
 screen into a new one to write over; the one it came from stays exactly where it
-was, one press away. Only the version marked `live` is ever shown to anybody, on
+was, one press away. Double-click the label of the one you are in, or hold it,
+to call it something instead: "short pitch", "long form". The name is yours and
+nobody else's, an empty one goes back to `vN`, and the number underneath it does
+not move, so an address never changes because a drawer was relabelled. Only the version marked `live` is ever shown to anybody, on
 the page, in the lists, in the feed and in the markdown, and moving that mark is
 `Make live`, a press of its own that appears only when the version on screen is
-not already it. A version that is not live can be thrown away by
-`Delete this version`; the live one cannot, so a published address always has
+not already it. A version that is not live can be thrown away by the bin at
+the end of the line; the live one cannot, so a published address always has
 words behind it.
 
 ```sh

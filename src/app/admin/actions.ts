@@ -183,6 +183,40 @@ export async function addVersion(
   }
 }
 
+/** What a version is called. Oscar's own shorthand — "short pitch", "long
+ *  form" — and nobody else's business: no reader sees it, nothing is derived
+ *  from it, and it has no bearing on which version is live. The number stays
+ *  the identity underneath it, so an address never moves because a drawer was
+ *  relabelled. An empty name is a version that goes back to being vN. */
+export async function renameVersion(
+  section: string,
+  id: number,
+  versionId: number,
+  name: string,
+): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
+  await requireSession();
+
+  if (!isSection(section)) return { ok: false, error: "Unknown kind of entry." };
+  if (!Number.isInteger(id) || !Number.isInteger(versionId)) {
+    return { ok: false, error: "That is not a version." };
+  }
+
+  /* Long enough for a name, short enough that the line stays a line. */
+  const called = String(name).replace(/\s+/g, " ").trim().slice(0, 40);
+
+  try {
+    const entry = await store.getEntry(sections[section].label, id);
+    if (!entry) return { ok: false, error: "That entry is gone." };
+
+    if (!(await store.setVersionName(id, versionId, called))) {
+      return { ok: false, error: "That version is gone." };
+    }
+    return { ok: true, name: called };
+  } catch (error) {
+    return { ok: false, error: message(error) };
+  }
+}
+
 /** One version thrown away, and only one: the entry stays, its address stays,
  *  and every other version of it stays. Never the version the site is showing —
  *  a reader's page must always have words behind it — which also means the last

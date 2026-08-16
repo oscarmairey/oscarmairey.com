@@ -139,7 +139,13 @@ typed into, so one composed just before a switch still lands where it was writte
 Above the bar, one grey line names the versions: `v1 v2 live v3`, the one on screen in
 oxide the way the nav marks the page you are on, the live one carrying the word `live`, and
 a `+` at the end that copies the version on screen into a new one to write over. A version
-that is not live carries a `Delete this version` at the far end of that line. `Make live`
+can also be called something — "short pitch", "long form" — by double-clicking, or holding,
+the label of the one being written: it becomes a field where it sits and commits on Enter or
+on leaving it. The name is `writings_versions.name`, it is Oscar's alone (no reader, no
+feed, no map, no markdown ever sees it), an empty one goes back to `vN`, and the number
+underneath never moves, so `?v=2` is still `?v=2` whatever the drawer is labelled. A version
+that is not live carries a bin at the far end of that line, drawn as an inline hairline SVG
+because there is no icon font in this stack and there is not going to be one. `Make live`
 appears beside `Publish` only when the version on screen is not the one readers get, which
 is exactly when it means something. The bar says whether a save is in flight and nothing
 else: whether a reader can see this is already on the button offering to publish it.
