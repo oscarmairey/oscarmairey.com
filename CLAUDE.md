@@ -182,7 +182,11 @@ The block format was already most of the way there — `## `, `> `, `* `, `[labe
 changes four things and copies the rest: image sources become absolute, `__underlined__`
 becomes `<u>`, a typed line break becomes markdown's, and sidenotes move to the foot as
 footnotes. Each entry page points at its markdown with
-`<link rel="alternate" type="text/markdown">`. The suffix is not on the entry's own address
+`<link rel="alternate" type="text/markdown">`, and every page points at the map with
+`<link rel="alternate" type="text/plain" href="/llms.txt">`. Both are written from
+`alternatesFor` in `src/lib/meta.ts` with the feed, because Next assigns `alternates` rather
+than merging it and a page that names its own canonical would otherwise drop the lot.
+The suffix is not on the entry's own address
 because a dynamic segment cannot carry one, and the catch-all that would allow it stands in
 front of the page it is meant to accompany.
 

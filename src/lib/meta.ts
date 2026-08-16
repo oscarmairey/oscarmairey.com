@@ -13,6 +13,10 @@ export const alternatesFor = (canonical: string, markdown?: string) => ({
   canonical,
   types: {
     "application/rss+xml": [{ url: "/feed.xml", title: site.name }],
+    /* The map for the half of the audience that is not a person. robots.txt
+       points at it, and so does every page, because an assistant handed one
+       address should not have to guess at the other. */
+    "text/plain": [{ url: "/llms.txt", title: "llms.txt" }],
     /* The same entry, without the page around it. */
     ...(markdown ? { "text/markdown": markdown } : {}),
   },

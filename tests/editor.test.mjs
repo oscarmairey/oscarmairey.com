@@ -796,6 +796,18 @@ async function machinesCanRead() {
   const linked = await page.getAttribute('link[rel="alternate"][type="text/markdown"]', "href");
   ok("the page points at its markdown", linked === "https://oscarmairey.com/md/notes/compliance-is-a-software-problem", String(linked));
 
+  /* Next assigns `alternates` rather than merging it, so a page that names its
+     own canonical takes the map and the feed down with it unless both are
+     written from the one helper. Checked here, where a page has done exactly
+     that. */
+  const heads = await page.evaluate(() =>
+    Object.fromEntries(
+      [...document.querySelectorAll('link[rel="alternate"]')].map((l) => [l.type, l.getAttribute("href")]),
+    ),
+  );
+  ok("and at the map for a machine", heads["text/plain"] === "https://oscarmairey.com/llms.txt", JSON.stringify(heads));
+  ok("with the feed still there", heads["application/rss+xml"] === "https://oscarmairey.com/feed.xml", JSON.stringify(heads));
+
   const types = await page.evaluate(() =>
     [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => JSON.parse(s.textContent)["@type"]),
   );
