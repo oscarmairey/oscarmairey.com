@@ -756,6 +756,16 @@ async function machinesCanRead() {
   ok("the assistants are named", ["GPTBot", "ClaudeBot", "PerplexityBot", "Google-Extended", "CCBot"].every((n) => robots.body.includes(n)));
   ok("and the map is pointed at", robots.body.includes("/llms.txt") && robots.body.includes("Sitemap:"));
 
+  const sitemap = await get("/sitemap.xml");
+  const locs = [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((l) => l[1]);
+  ok("the sitemap is served", sitemap.status === 200 && locs.length > 0, `${sitemap.status} ${locs.length} urls`);
+  for (const route of ["/notes", "/books", "/companies"]) {
+    const listed = locs.includes(`https://oscarmairey.com${route}`);
+    const carries = locs.some((l) => l.startsWith(`https://oscarmairey.com${route}/`));
+    ok(`${route} is in the map only when something is published on it`, listed === carries, `listed ${listed}, entries ${carries}`);
+  }
+  ok("and no drafts", !locs.some((l) => l.endsWith("/build-it-then-sell-it")), locs.join(" "));
+
   const map = await get("/llms.txt");
   ok("llms.txt is served", map.status === 200 && map.type.startsWith("text/plain"), `${map.status} ${map.type}`);
   ok("it opens with the name and the bio", map.body.startsWith("# Oscar Mairey") && map.body.includes("> "), map.body.slice(0, 60));

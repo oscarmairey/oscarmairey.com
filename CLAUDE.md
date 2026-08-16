@@ -161,7 +161,10 @@ because it reads the pathname.
 `metadataBase`, per-route canonicals, OpenGraph and Twitter cards (`src/app/opengraph-image.png`,
 regenerated from `assets/photo.png`), JSON-LD `Person` on every page and `Article` on a note,
 `sitemap.ts`, a hand-written `robots.txt` and an RSS feed at `/feed.xml` carrying notes only.
-Title template: `%s · Oscar Mairey`.
+Title template: `%s · Oscar Mairey`. A list page is in the sitemap only while something is
+published on it: an empty page is worth less than no page at all in a map this short, and
+the count is read rather than written down, so the list comes back the day it has an entry.
+The page itself stays reachable and stays in the nav either way.
 
 Half the audience is not a person. An investor running due diligence increasingly reads the
 site through an assistant, and what that assistant quotes is what the reader gets. So the
