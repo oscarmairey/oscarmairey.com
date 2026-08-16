@@ -107,7 +107,9 @@ const ok = (name, pass, detail = "") => {
 };
 
 const browser = await chromium.launch({ args: LEAN });
-const context = await browser.newContext();
+/* Copy and paste are the point of one of the flows below, and a real Ctrl+C
+   goes through the browser's own clipboard. */
+const context = await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] });
 const page = await context.newPage();
 
 /* The test server compiles each route the first time it is asked for one, so
@@ -1004,6 +1006,182 @@ async function versionsAreOscars() {
   );
 }
 
+/** What arrives on a clipboard, and what leaves on one.
+ *
+ *  Two halves. Somebody else's markup is read into the site's own blocks and
+ *  nothing of theirs survives the journey. The site's own writing carries its
+ *  source with it, so a paste from one version into another is the blocks it
+ *  was rather than a reading of the markup they were drawn as — which is the
+ *  half Oscar actually does every day. */
+
+/* A page's worth of markup, of the kind a clipboard really carries: a word
+   processor's weight-on-a-span, its <b> wrapper that turns itself off again, a
+   nested list, a hotlinked picture, classes and styles on everything, and a
+   script for good measure. */
+const RICH = `<b style="font-weight:normal" id="docs-internal-guid-1">
+  <h1 class="headline" style="font-size:40px">A pasted heading</h1>
+  <p class="lede" style="color:red">Some <b>bold</b>, some <i>italic</i>, some
+     <u>underlined</u>, and a <a href="https://example.com/a" class="cta">link</a>.</p>
+  <p>Before the break.<br>After the break.</p>
+  <blockquote><p>The quoted sentence.</p><footer>&mdash; Somebody</footer></blockquote>
+  <ul><li>First bullet</li><li>Second bullet<ul><li>Nested bullet</li></ul></li></ul>
+  <p><span style="font-weight:700">Docs bold</span> and
+     <span style="font-style:italic">Docs italic</span>.</p>
+  <p><img src="https://example.com/hot.png" alt="hotlink">A picture that stays behind.</p>
+  <script>window.pwned = 1</script>
+  <table><tr><td>Cell one</td><td>Cell two</td></tr></table>
+</b>`;
+
+/** Puts the caret at the end of the body and hands it a clipboard. */
+async function pasteHtml(html) {
+  await page.evaluate(
+    ([markup, region]) => {
+      const host = document.querySelector(region);
+      host.focus();
+      const range = document.createRange();
+      range.selectNodeContents(host.lastElementChild ?? host);
+      range.collapse(false);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const carried = new DataTransfer();
+      carried.setData("text/html", markup);
+      carried.setData("text/plain", "the plain fallback");
+      host.dispatchEvent(
+        new ClipboardEvent("paste", { clipboardData: carried, bubbles: true, cancelable: true }),
+      );
+    },
+    [html, BODY],
+  );
+  await page.waitForTimeout(400);
+}
+
+async function pasteKeepsItsShape() {
+  console.log("\npaste");
+
+  const stamp = Date.now();
+  const one = `Playwright paste ${stamp}`;
+  const two = `Playwright pasted again ${stamp}`;
+
+  const has = (sel) => page.locator(`${BODY} ${sel}`).count();
+  const innerBody = () => page.evaluate((b) => document.querySelector(b).innerHTML, BODY);
+
+  /* ---- somebody else's markup -------------------------------------------- */
+
+  await page.goto(`${BASE}/admin/notes/new`, { waitUntil: "networkidle" });
+  await settled();
+  await typeInto('[data-region="title"]', one);
+  await typeInto(FIRST, "Written by hand, and then a paste under it.");
+  await pasteHtml(RICH);
+
+  ok("a heading arrives as the one heading there is", (await has("h2")) === 1, await innerBody());
+  ok("with its text", (await text(`${BODY} h2`)) === "A pasted heading");
+  ok("bold arrives", (await has("strong")) === 2, String(await has("strong")));
+  ok("italic arrives", (await has("em")) === 2, String(await has("em")));
+  ok("the underline arrives", (await has("u")) === 1);
+  ok("a link arrives", (await has("a")) === 1);
+  ok(
+    "with its address",
+    (await page.getAttribute(`${BODY} a`, "href")) === "https://example.com/a",
+    await page.getAttribute(`${BODY} a`, "href"),
+  );
+  ok("a quote arrives", (await has("blockquote")) === 1);
+  ok("with whoever said it", ((await text(`${BODY} blockquote`)) ?? "").includes("Somebody"));
+  ok("a list arrives", (await has("ul")) === 1);
+  ok("flattened to the one level the model has", (await has("ul li")) === 3, String(await has("ul li")));
+  ok("a typed line break arrives", (await has("p br")) >= 1);
+  ok("a table's cells arrive as lines", ((await innerBody()) ?? "").includes("Cell one"));
+
+  const markup = await innerBody();
+  ok("no class survives", !/class="(?!ref|sn|n|src)/.test(markup), markup.slice(0, 120));
+  ok("no style survives", !markup.includes("style="), markup.slice(0, 120));
+  ok("no script survives", !markup.includes("<script"), markup.slice(0, 120));
+  ok("and no id from somebody else", !markup.includes("docs-internal-guid"));
+  ok("an external picture is left behind", (await has("figure")) === 0);
+  ok("but the words beside it are not", markup.includes("A picture that stays behind"));
+  ok("nothing ran", (await page.evaluate(() => window.pwned)) === undefined);
+
+  /* A sidenote of its own, so the copy below has one to carry. */
+  await page.click(`${BODY} > p:first-child`);
+  await menuOn(`${BODY} > p:first-child`, "Sidenote");
+  await page.keyboard.type("A note in the margin.", { delay: 15 });
+  await page.waitForTimeout(200);
+  ok("a sidenote is on the page", (await has(".sn")) === 1);
+
+  await saved();
+  const first = page.url().replace(/\?.*$/, "");
+  await page.reload({ waitUntil: "networkidle" });
+  await settled();
+  ok("it all came back through the database", (await has("h2")) === 1 && (await has("ul li")) === 3);
+  ok("the link came back", (await has("a")) === 1);
+  ok("the sidenote came back", (await has(".sn")) === 1);
+
+  const stored = await innerBody();
+
+  await page.click('.adm-actions button:text-is("Publish")');
+  await page.waitForSelector('.adm-actions button:text-is("Unpublish")', { timeout: 20000 });
+  const slug = first.replace(`${BASE}/admin/notes/`, "");
+  await page.goto(`${BASE}/notes/${slug}`, { waitUntil: "networkidle" });
+  ok("the heading is on the public page", (await page.locator("article .prose h2").count()) === 1);
+  ok("the list is on the public page", (await page.locator("article .prose ul li").count()) === 3);
+  ok("the link is on the public page", (await page.locator("article .prose a").count()) === 1);
+  ok("and the sidenote", (await page.locator("article .prose .sn").count()) === 1);
+
+  /* ---- and the site's own, which is the half that matters ---------------- */
+
+  await page.goto(first, { waitUntil: "networkidle" });
+  await settled();
+
+  /* What the copy handler actually puts on a clipboard, read straight back. */
+  const carried = await page.evaluate((b) => {
+    const host = document.querySelector(b);
+    host.focus();
+    const range = document.createRange();
+    range.selectNodeContents(host);
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    const data = new DataTransfer();
+    host.dispatchEvent(new ClipboardEvent("copy", { clipboardData: data, bubbles: true, cancelable: true }));
+    return { plain: data.getData("text/plain"), html: data.getData("text/html") };
+  }, BODY);
+
+  ok("copying puts the source itself on the clipboard", carried.plain.includes("## A pasted heading"), carried.plain.slice(0, 60));
+  ok("marks and all", carried.plain.includes("**bold**") && carried.plain.includes("*italic*"));
+  ok("links and all", carried.plain.includes("[link](https://example.com/a)"));
+  ok("quotes and all", carried.plain.includes("> The quoted sentence."));
+  ok("bullets and all", carried.plain.includes("* First bullet"));
+  ok("sidenotes and all", /\[\^\d\]: A note in the margin\./.test(carried.plain), carried.plain.slice(0, 80));
+  ok("and the markup carries the source with it", carried.html.includes("data-om-blocks="), carried.html.slice(0, 80));
+
+  /* Now the real thing: Ctrl+C here, Ctrl+V in another entry. */
+  await page.keyboard.press("Control+c");
+  await page.waitForTimeout(300);
+
+  await page.goto(`${BASE}/admin/notes/new`, { waitUntil: "networkidle" });
+  await settled();
+  await typeInto('[data-region="title"]', two);
+  await page.click(FIRST);
+  await page.keyboard.press("Control+v");
+  await page.waitForTimeout(600);
+
+  ok("the heading came across", (await has("h2")) === 1, await innerBody());
+  ok("with its text", (await text(`${BODY} h2`)) === "A pasted heading");
+  ok("bold, italic and the underline came across",
+     (await has("strong")) === 2 && (await has("em")) === 2 && (await has("u")) === 1);
+  ok("the link came across", (await has("a")) === 1);
+  ok("the quote came across", (await has("blockquote")) === 1);
+  ok("the list came across", (await has("ul li")) === 3);
+  ok("and the sidenote came across", (await has(".sn")) === 1);
+
+  await saved();
+  await page.reload({ waitUntil: "networkidle" });
+  await settled();
+  ok("what was stored is what was copied, block for block", (await innerBody()) === stored, await innerBody());
+}
+
 /** What a machine reading the site on somebody's behalf is given. */
 async function machinesCanRead() {
   console.log("\nmachines");
@@ -1099,6 +1277,7 @@ if (!process.env.ONLY) await dateSurvivesPublishing();
 if (!process.env.ONLY || process.env.ONLY === "blocks") await blocksBehave();
 if (!process.env.ONLY || process.env.ONLY === "ordering") await ordersByHand();
 if (!process.env.ONLY || process.env.ONLY === "versions") await versionsAreOscars();
+if (!process.env.ONLY || process.env.ONLY === "paste") await pasteKeepsItsShape();
 if (!process.env.ONLY || process.env.ONLY === "machines") await machinesCanRead();
 
 console.log(`\npage errors: ${errors.length}`);

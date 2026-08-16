@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Entry from "@/components/site/entry";
-import { parseBody, readingTime, serializeBlocks, type Block } from "@/lib/blocks";
+import { lastNote, parseBody, readingTime, serializeBlocks, type Block } from "@/lib/blocks";
 import { formatDay } from "@/lib/format";
 import { itemOf, sections, type Draft, type EditField, type Version } from "@/lib/labels";
 import { ACCEPT, images, prepare } from "@/lib/media";
@@ -27,9 +27,9 @@ import { Body, Region, blocksFromDom, caretInto, figureHtml, listFrom, listInto 
  *  body, and only the date it settles on comes back.
  *
  *  An entry can be written more than once. The line above the bar names its
- *  versions, opens one, starts another — blank, or as a copy of this one — and
- *  says which of them a reader gets; that last is a press of its own, weighed
- *  the same as publishing, and nothing else moves it. Opening a version is a
+ *  versions, opens one, starts another from the one on screen, and says which of
+ *  them a reader gets; that last is a press of its own, weighed the same as
+ *  publishing, and nothing else moves it. Opening a version is a
  *  navigation, because the page is mounted from the version it is showing and a
  *  region is written exactly once. Whatever is unsaved goes first, and every
  *  save carries the version it was typed into, so nothing lands in the wrong
@@ -306,8 +306,7 @@ export default function Editor({ initial, live, slug, versions, liveVersionId }:
     const block = menu?.block;
     if (!block || block.tagName !== "P" || block.querySelector(".sn")) return setMenu(null);
 
-    const taken = (draft.body.match(/\[\^(\d+)\]/g) ?? []).map((m) => Number(m.slice(2, -1)));
-    const n = Math.max(0, ...taken) + 1;
+    const n = lastNote(draft.body) + 1;
 
     apply(() => {
       document.execCommand("insertHTML", false, `<sup class="ref" data-ref="${n}">${n}</sup>`);

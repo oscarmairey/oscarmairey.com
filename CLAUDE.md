@@ -110,6 +110,25 @@ link; Cmd or Ctrl with B, I, U and K reach the four that are text.
 inline tokens live, reads them back as source, and keeps the caret still by writing a
 region's content exactly once. The stored format never changes.
 
+**Pasting keeps its shape.** Copying out of the body puts the writing on the clipboard
+twice: as the block source, which is what a plain-text target gets, and as markup carrying
+that same source inside a `data-om-blocks` attribute. So a paste back in — from another
+version, another entry, or the site's own public page — is the blocks it was rather than a
+reading of the markup they were drawn as, and headings, links, the three marks, quotes,
+lists and sidenotes survive by construction. A selection dragged across blocks copies every
+block it covers, half-paragraphs at the ends included. Anything else on the clipboard is
+read by `src/lib/paste.ts`, which walks the fragment and writes only what the format has a
+word for: headings of any level become the one heading, a list inside a list flattens to the
+one level, a word processor's `font-weight` span becomes **bold** and its `font-weight:
+normal` wrapper becomes nothing. No class, style, id, script or unknown element survives —
+an unknown element unwraps to its text. Links are limited to `http`, `https`, `mailto`,
+`tel` and same-site addresses. A run of plain sentences lands inside the paragraph the caret
+is in; anything with a shape of its own arrives as blocks and the browser splits the
+paragraph around them. Sidenotes coming in are renumbered past the ones already there.
+Images inside pasted HTML are dropped rather than hotlinked or fetched: a picture is
+uploaded, from a file, and that path is untouched. A plain-text clipboard is inserted as
+plain text, as it always was.
+
 Whatever the page prints is typed on the page, in the place it prints. A company's period
 and role are the stamp under its name, a book's author is the stamp under its title, and a
 note's date is picked in the stamp where it is read. There is no metadata row anywhere and

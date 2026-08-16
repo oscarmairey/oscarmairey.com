@@ -116,6 +116,39 @@ export function serializeBlocks(blocks: Block[]): string {
     .join("\n\n");
 }
 
+/** The highest sidenote number a body already uses, which is where the next one
+ *  starts. Zero when there are none. */
+export function lastNote(body: string): number {
+  return Math.max(0, ...(body.match(/\[\^(\d+)\]/g) ?? []).map((one) => Number(one.slice(2, -1))));
+}
+
+/** Sidenotes carried in from somewhere else, renumbered past whatever the body
+ *  they are landing in already uses, so two ones do not arrive.
+ *
+ *  Both ends move together: the marker inside the paragraph and the note that
+ *  answers it are the same number in two places, and a paste that changed only
+ *  one of them would break the pair. */
+export function renumberNotes(blocks: Block[], after: number): Block[] {
+  const moved = new Map<number, number>();
+  let next = after + 1;
+  for (const block of blocks) {
+    if (block.kind === "note" && !moved.has(block.n)) moved.set(block.n, next++);
+  }
+  if (moved.size === 0) return blocks;
+
+  const redo = (text: string) =>
+    text.replace(/\[\^(\d+)\]/g, (whole, n) => {
+      const to = moved.get(Number(n));
+      return to === undefined ? whole : `[^${to}]`;
+    });
+
+  return blocks.map((block) => {
+    if (block.kind === "note") return { ...block, n: moved.get(block.n) ?? block.n, text: redo(block.text) };
+    if (block.kind === "p") return { ...block, text: redo(block.text) };
+    return block;
+  });
+}
+
 /** Every image a body refers to, in the order it uses them. What the editor
  *  sweeps against when a body stops mentioning a file. */
 export function imageNames(body: string): string[] {

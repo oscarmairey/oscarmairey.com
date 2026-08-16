@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Block } from "@/lib/blocks";
+import { lastNote, renumberNotes, serializeBlocks, type Block } from "@/lib/blocks";
 import { TOKEN } from "@/lib/inline";
 import { imageSize, images, mediaUrl } from "@/lib/media";
+import { OWN, blocksFromHtml, carry } from "@/lib/paste";
 
 /** The whole of the WYSIWYG machinery, in one file and no dependencies.
  *
@@ -332,6 +333,51 @@ export function blocksFromDom(host: HTMLElement): Block[] {
   return out;
 }
 
+/* ---- what is selected, as blocks ----------------------------------------- */
+
+/** The tags the host holds as blocks. Everything else at the top of a fragment
+ *  is loose inline text that was standing in the middle of one. */
+const BLOCK_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "BLOCKQUOTE", "UL", "OL", "FIGURE"]);
+
+/** Text taken from the middle of a paragraph arrives without the paragraph, so
+ *  each run of it is given one before the fragment is read. */
+function loose(holder: HTMLElement) {
+  let run: ChildNode[] = [];
+
+  const wrap = () => {
+    if (run.length === 0) return;
+    const p = document.createElement("p");
+    holder.insertBefore(p, run[0]);
+    p.append(...run);
+    run = [];
+  };
+
+  for (const node of Array.from(holder.childNodes)) {
+    if (node instanceof HTMLElement && BLOCK_TAGS.has(node.tagName)) wrap();
+    else run.push(node);
+  }
+  wrap();
+}
+
+/** Whatever is selected inside the host, as blocks.
+ *
+ *  A selection inside one paragraph is one paragraph; one dragged across three
+ *  is three, the ends half-empty exactly as they were dragged. cloneContents
+ *  keeps the structure inside the range, so what comes back is already the
+ *  shape blocksFromDom reads. */
+export function blocksFromSelection(host: HTMLElement): Block[] {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return [];
+
+  const range = selection.getRangeAt(0);
+  if (!host.contains(range.commonAncestorContainer)) return [];
+
+  const holder = document.createElement("div");
+  holder.append(range.cloneContents());
+  loose(holder);
+  return blocksFromDom(holder);
+}
+
 /* ---- and written into it once ------------------------------------------- */
 
 const noteHtml = (block: Extract<Block, { kind: "note" }>) =>
@@ -416,6 +462,58 @@ export function Body({
     onChange(blocksFromDom(host.current));
   };
 
+  /** Copying puts the writing on the clipboard twice: as the source it is
+   *  stored as, which is also what a plain-text target should get, and as the
+   *  markup a word processor or a mail client wants — with the source riding
+   *  along inside it.
+   *
+   *  That second copy is the point. Pasting back into the editor, from another
+   *  version or another entry, is then the same blocks it was rather than a
+   *  reading of the markup they were drawn as: nothing is interpreted, so
+   *  nothing can be lost. Headings, links, the three marks, quotes, lists and
+   *  sidenotes all survive by construction rather than by effort. */
+  function carrying(event: React.ClipboardEvent, cut: boolean) {
+    if (!host.current) return;
+
+    const blocks = blocksFromSelection(host.current);
+    if (blocks.length === 0) return; // nothing this format has a word for
+
+    const source = serializeBlocks(blocks);
+    event.preventDefault();
+    event.clipboardData.setData("text/plain", source);
+    event.clipboardData.setData(
+      "text/html",
+      `<div ${OWN}="${carry(source)}">${bodyHtml(blocks)}</div>`,
+    );
+
+    if (cut) {
+      document.execCommand("delete");
+      read();
+    }
+  }
+
+  /** Blocks, put in where the caret is.
+   *
+   *  A run of plain sentences lands inside the paragraph it is dropped into,
+   *  because that is what pasting a phrase means. Anything with a shape of its
+   *  own — a heading, a list, a quote, more than one paragraph — arrives as
+   *  blocks, and the browser splits the paragraph around them, which is the one
+   *  part of this it is genuinely good at. */
+  function splice(blocks: Block[]) {
+    if (!host.current) return;
+
+    /* Sidenotes coming in are renumbered past the ones already here, or two
+       ones arrive and the pairs cross. */
+    const here = Array.from(host.current.querySelectorAll<HTMLElement>("sup.ref"))
+      .map((sup) => Number(sup.dataset.ref ?? sup.textContent ?? 0))
+      .filter((n) => n > 0);
+    const ready = renumberNotes(blocks, Math.max(0, ...here));
+
+    const only = ready.length === 1 && ready[0].kind === "p" ? ready[0] : null;
+    document.execCommand("insertHTML", false, only ? inlineHtml(only.text) : bodyHtml(ready));
+    read();
+  }
+
   useEffect(() => {
     document.execCommand("defaultParagraphSeparator", false, "p");
   }, []);
@@ -465,6 +563,8 @@ export function Body({
         event.preventDefault();
         onFiles(dropped);
       }}
+      onCopy={(event) => carrying(event, false)}
+      onCut={(event) => carrying(event, true)}
       onPaste={(event) => {
         const pasted = images(event.clipboardData.files);
         if (pasted.length > 0) {
@@ -472,9 +572,18 @@ export function Body({
           onFiles(pasted);
           return;
         }
-        /* Text, never somebody else's markup. execCommand keeps the browser's
-           own undo stack, which nothing here could rebuild. */
+
+        /* Never somebody else's markup: what arrives is read into this site's
+           own blocks and written back out as this site's own markup, so no
+           class, no style and no unknown element survives the journey.
+           execCommand keeps the browser's own undo stack, which nothing here
+           could rebuild. */
         event.preventDefault();
+
+        const html = event.clipboardData.getData("text/html");
+        const blocks = html ? blocksFromHtml(html) : [];
+        if (blocks.length > 0) return splice(blocks);
+
         document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
       }}
       dangerouslySetInnerHTML={initial.current}

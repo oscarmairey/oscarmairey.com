@@ -158,6 +158,15 @@ and a right click — or a selection, on a phone — offers heading, quote,
 sidenote, emphasis and link. No editor library: `src/app/admin/editable.tsx` is
 all of it.
 
+Pasting keeps its formatting. Copy out of the editor and the writing goes on
+the clipboard as its own source, so pasting it into another version or another
+entry brings the headings, links, marks, quotes, lists and sidenotes across
+exactly. Paste from a web page, a document or a mail and it is read into the
+same small format instead: headings of any level become the one heading, nested
+bullets flatten to one level, and no class, style, script or unknown element
+comes with it. Pictures inside pasted markup are left behind rather than
+hotlinked — an image gets into the page by being uploaded.
+
 Images are pasted, dropped on the page, or picked from the right-click menu.
 The browser shrinks them first — 1600px on the long edge, webp at 0.85, GIFs
 untouched — because the server has no processing library. What it sends is
