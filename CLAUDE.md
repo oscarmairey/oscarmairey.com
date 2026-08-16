@@ -40,7 +40,7 @@ editor. Adding a fourth label is a row in `src/lib/labels.tsx` and three files.
 
 | Route | Content |
 |---|---|
-| `/` | Bio, then the five newest of each list, titles and metadata only |
+| `/` | Bio, then the five newest of each list that has anything on it, titles and metadata only |
 | `/notes` | Every published note |
 | `/notes/[slug]` | One note, with sidenotes |
 | `/books` | Books finished, with the reason each one stayed |
@@ -216,10 +216,18 @@ because it reads the pathname.
 `metadataBase`, per-route canonicals, OpenGraph and Twitter cards (`src/app/opengraph-image.png`,
 regenerated from `assets/photo.png`), JSON-LD `Person` on every page and `Article` on a note,
 `sitemap.ts`, a hand-written `robots.txt` and an RSS feed at `/feed.xml` carrying notes only.
-Title template: `%s · Oscar Mairey`. A list page is in the sitemap only while something is
-published on it: an empty page is worth less than no page at all in a map this short, and
-the count is read rather than written down, so the list comes back the day it has an entry.
-The page itself stays reachable and stays in the nav either way.
+Title template: `%s · Oscar Mairey`. A list is in the sitemap, and has a section on the home
+page, only while something is published on it: an empty page is worth less than no page at
+all in a map this short, and on a home page read in ninety seconds a heading with nothing
+under it spends some of them saying so. It is out of the nav for the same reason: a masthead
+of three has no room for a word that leads to nothing. All of it is read rather than written
+down, so each comes back the day the list has an entry. The section takes its own hairline
+with it, so the rhythm of the page closes over the gap. The list page itself stays
+reachable — an address that has been given out still answers — and the editor reaches every
+list from `/admin` whatever the masthead says. A database that has not answered at all is
+not the same as a list that is empty: silence leaves the nav exactly as it was, because a
+page with nothing on it reads as a page with nothing on it while a masthead that has lost
+its sections reads as a broken site.
 
 Half the audience is not a person. An investor running due diligence increasingly reads the
 site through an assistant, and what that assistant quotes is what the reader gets. So the

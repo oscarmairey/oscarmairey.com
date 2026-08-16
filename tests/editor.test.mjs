@@ -1338,6 +1338,71 @@ async function machinesCanRead() {
   ok("the date is a time", (await page.locator("article time[datetime]").count()) === 1);
 }
 
+/** A list with nothing on it says nothing.
+ *
+ *  The home page is read in ninety seconds, and a heading with nothing under it
+ *  spends some of them. So a section whose list is empty is absent — heading,
+ *  band and hairline together — while the list keeps its page and its place in
+ *  the nav, and comes back on its own the day something is published on it.
+ *
+ *  Run last, because it is the one flow that takes things off the site. */
+async function emptyListsKeepQuiet() {
+  console.log("\nempty lists");
+
+  const headings = () => page.$$eval(".section h2", (all) => all.map((h) => h.textContent));
+  const shows = async (word) => (await headings()).includes(word);
+  const home = () => page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+
+  await home();
+  ok("the home page shows a list that has something on it", await shows("Books"));
+
+  /* Every book off the site, one press at a time, the way Oscar would. */
+  await page.goto(`${BASE}/admin/books`, { waitUntil: "networkidle" });
+  const editors = await page.$$eval(".adm-rowbody a.t", (all) => all.map((a) => a.getAttribute("href")));
+
+  for (const href of editors) {
+    await page.goto(`${BASE}${href}`, { waitUntil: "networkidle" });
+    await settled();
+    if ((await page.locator('.adm-actions button:text-is("Unpublish")').count()) === 0) continue;
+    await page.click('.adm-actions button:text-is("Unpublish")');
+    await page.waitForSelector('.adm-actions button:text-is("Publish")', { timeout: 20000 });
+  }
+
+  await home();
+  const left = await headings();
+  ok("an empty list has no heading on the home page", !(await shows("Books")), left.join(" | "));
+  ok("the others are untouched", left.join(" | ") === "Notes | Companies", left.join(" | "));
+  ok("and nothing is left where it was", (await page.locator(".section").count()) === 2);
+
+  /* One hairline per section, and the section took its own with it. */
+  const rules = await page.$$eval(".section", (all) =>
+    all.map((s) => getComputedStyle(s).borderTopWidth),
+  );
+  ok("no doubled rule where it used to be", rules.every((w) => w === "1px"), rules.join(" | "));
+
+  /* And out of the masthead with it: a nav of three has no room for a word
+     that leads nowhere. The address still answers, for anyone holding one. */
+  ok("it is out of the nav too", (await page.locator('nav a[href="/books"]').count()) === 0,
+     (await page.$$eval("nav a", (all) => all.map((a) => a.textContent))).join(" | "));
+  ok("and the other two are still there", (await page.locator("nav a").count()) === 2);
+  ok("the list page is still reachable", (await page.request.get(`${BASE}/books`)).status() === 200);
+  ok("and out of the map while it is empty", !(await (await page.request.get(`${BASE}/sitemap.xml`)).text()).includes("oscarmairey.com/books<"));
+
+  /* And it comes back on its own, which is the whole point of counting. */
+  await page.goto(`${BASE}${editors[0]}`, { waitUntil: "networkidle" });
+  await settled();
+  await page.click('.adm-actions button:text-is("Publish")');
+  await page.waitForSelector('.adm-actions button:text-is("Unpublish")', { timeout: 20000 });
+
+  await home();
+  ok("it comes back the day something is published on it", await shows("Books"));
+  ok("in its place", (await headings()).join(" | ") === "Notes | Books | Companies", (await headings()).join(" | "));
+  ok("and so does the word in the nav", (await page.locator('nav a[href="/books"]').count()) === 1);
+  ok("in its place too",
+     (await page.$$eval("nav a", (all) => all.map((a) => a.textContent))).join(" | ") === "Notes | Books | Companies",
+     (await page.$$eval("nav a", (all) => all.map((a) => a.textContent))).join(" | "));
+}
+
 await signIn();
 for (const [section, one] of [["notes", "note"], ["books", "book"], ["companies", "company"]]) {
   if (process.env.ONLY && process.env.ONLY !== section) continue;
@@ -1349,6 +1414,8 @@ if (!process.env.ONLY || process.env.ONLY === "ordering") await ordersByHand();
 if (!process.env.ONLY || process.env.ONLY === "versions") await versionsAreOscars();
 if (!process.env.ONLY || process.env.ONLY === "paste") await pasteKeepsItsShape();
 if (!process.env.ONLY || process.env.ONLY === "machines") await machinesCanRead();
+/* Last: the one flow that takes things off the site. */
+if (!process.env.ONLY || process.env.ONLY === "empty") await emptyListsKeepQuiet();
 
 console.log(`\npage errors: ${errors.length}`);
 for (const e of errors.slice(0, 8)) console.log(`  ${e.slice(0, 200)}`);

@@ -1,7 +1,7 @@
 import { site } from "@/content/site";
 import { query, queryOne } from "@/lib/db";
 import type { Item, Section } from "@/lib/labels";
-import { sections } from "@/lib/labels";
+import { sectionList, sections } from "@/lib/labels";
 
 /** Everything the public site reads, and the reason it survives a dead database.
  *
@@ -117,4 +117,20 @@ export async function published(section: Section): Promise<Item[]> {
 export async function publishedOne(section: Section, slug: string): Promise<Item | undefined> {
   const all = await published(section);
   return all.find((item) => item.slug === slug);
+}
+
+/** The lists with something on them, which are the ones the nav points at.
+ *
+ *  Silence is not emptiness. A database that has never answered leaves every
+ *  list looking empty, and the difference matters here in a way it does not on
+ *  a page: a page with nothing on it reads as a page with nothing on it, but a
+ *  masthead that has lost its sections reads as a broken site. So a section is
+ *  taken out of the nav only on a real answer of nothing, and an unanswered
+ *  read leaves it exactly where it was. */
+export async function stocked(): Promise<Section[]> {
+  const lists = await Promise.all(sectionList.map((spec) => published(spec.section)));
+
+  return sectionList
+    .filter((spec, i) => lists[i].length > 0 || !store.has(spec.section))
+    .map((spec) => spec.section);
 }

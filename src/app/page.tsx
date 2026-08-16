@@ -16,6 +16,15 @@ const SHOWN = 5;
 function Index({ section, items }: { section: Section; items: Item[] }) {
   const spec = sections[section];
 
+  /* A list with nothing published on it does not appear at all: no heading, no
+     empty band under it, and no hairline, because every section carries its own
+     and takes it away with it. This page is read in ninety seconds and a
+     heading with nothing under it spends some of them saying so.
+     The count is read rather than written down, so the section comes back on
+     its own the day something is published on it — and the list keeps its page
+     and its place in the nav either way. */
+  if (items.length === 0) return null;
+
   return (
     <section className="section">
       <h2>{spec.plural}</h2>

@@ -4,7 +4,8 @@ import { Literata } from "next/font/google";
 import "./globals.css";
 import Masthead from "@/components/site/masthead";
 import Footer from "@/components/site/footer";
-import { site } from "@/content/site";
+import { nav, site } from "@/content/site";
+import { stocked } from "@/lib/content";
 import { alternatesFor } from "@/lib/meta";
 
 /** One family for the whole site: body, links, dates, headings, email.
@@ -59,7 +60,14 @@ const personLd = {
   sameAs: site.links.map((l) => l.href),
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/** Async because the masthead asks a question of the database: which lists
+ *  have anything on them. It goes through the same thirty-second cache every
+ *  page reads, so it costs nothing a page was not already paying, and it never
+ *  throws. Every route under here is dynamic already. */
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const shown = await stocked();
+  const links = nav.filter((item) => shown.some((section) => item.href === `/${section}`));
+
   return (
     <html lang="en">
       <body className={literata.variable}>
@@ -67,7 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <div className="wrap">
-          <Masthead />
+          <Masthead links={links} />
           <main id="main">{children}</main>
           <Footer />
         </div>

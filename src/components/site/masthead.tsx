@@ -4,9 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { nav, site } from "@/content/site";
 
-/** Name on the left, three sections on the right, one hairline under it.
- *  On the home page the name is the page's h1; elsewhere it is a link back. */
-export default function Masthead() {
+/** Name on the left, the sections on the right, one hairline under it.
+ *  On the home page the name is the page's h1; elsewhere it is a link back.
+ *
+ *  Which sections there are is not this component's business: it is handed the
+ *  ones that have something on them, because a list nobody has published into
+ *  is not worth a word in a nav of three. The layout counts; this prints. */
+export default function Masthead({ links = nav }: { links?: typeof nav }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
 
@@ -20,7 +24,7 @@ export default function Masthead() {
         </Link>
       )}
       <nav aria-label="Sections">
-        {nav.map((item) => (
+        {links.map((item) => (
           <Link
             key={item.href}
             href={item.href}
